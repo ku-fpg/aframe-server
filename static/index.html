@@ -27,7 +27,10 @@
   <script>
     $(function(){
       console.log("Here");
-      $.get( "scene.aframe", function( data ) {
+      var url = window.location
+
+      $.get( "/scene", function( data ) {
+        console.log("got",data)
 //            $("a-scene").prepend ( data );
       });
     });

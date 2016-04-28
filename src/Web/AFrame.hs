@@ -30,7 +30,9 @@ aframeServer port aframe = do
       crudObj = O.Object $ \ case 
           W.Create {} -> fail "Create not supported"
           W.Get    v  -> fail "Get not supported"
-          W.Table  _  -> fail "Table not supported"
+          W.Table  _  -> fail "!!!"
+--              af <- aframe # GetAFrame
+--              return ()
           W.Update w  -> fail "Update not supported"
           W.Delete {} -> fail "Delete not supported"
 
