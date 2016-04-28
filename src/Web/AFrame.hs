@@ -1,7 +1,11 @@
-{-# LANGUAGE KindSignatures, GADTs #-}
+{-# LANGUAGE KindSignatures, GADTs, LambdaCase #-}
 module Web.AFrame where
 
-import Text.AFrame
+import qualified Control.Object as O
+import           Control.Object ((#))
+
+import           Text.AFrame
+import qualified Web.Scotty.CRUD as W
 
 data AFrameP :: * -> * where
   SetAFrame :: AFrame -> AFrameP ()
@@ -18,6 +22,12 @@ data AFrameP :: * -> * where
 aframeServer :: Int -> IO ()
 aframeServer port = do
   
---  let aframeO = 
+  let aframeObj :: O.Object W.CRUD
+      aframeObj = O.Object $ \ case 
+          W.Create {} -> fail "Create not supported"
+          W.Get    v  -> fail "Get not supported"
+          W.Table  _  -> fail "Table not supported"
+          W.Update w  -> fail "Update not supported"
+          W.Delete {} -> fail "Delete not supported"
   
   return ()
