@@ -22,14 +22,37 @@
       // Every second, update the scene
       var sceneText = "";
       var resetScene = function(data) {
+//        console.log("checking")
         if (data == sceneText) {
-          return;
+            setTimeout(loadScene,1000)
+            return;
         }
         sceneText = data;
-        // Insert the first scene into the DOM, removing any previous scene.
-        $("a-scene").remove();     
-        $("body").prepend(data);
-        setInterval(loadScene,1000)
+        x = sceneText;
+        
+        if ($("a-scene").length == 0) {
+          $("body").prepend(data);
+        } else {
+          var ch = $("a-scene").children();
+          for(i = 0;i < ch.length;i++) {
+            if (!ch[i].localName
+                  || ch[i].localName == "canvas"
+                  || ch[i].localName == "div"
+                  || ch[i].attributes["data-aframe-default-light"]
+                  || ch[i].attributes["data-aframe-default-camera"]
+            ) {
+//              console.log("leaving " + i);
+            } else {
+//              console.log("removing " + i)
+              // This appears to be leaving the Three.js Gemoetries behind. 
+              // TODO: check into this
+              $(ch[i]).remove()
+            }
+          }
+//          console.log("childern",$("a-scene").children())
+          $("a-scene").prepend($(data.replace("a-scene","x-scene")).html())
+        }
+        setTimeout(loadScene,1000)
       }
       var loadScene = function() {
         $.get( "/scene", resetScene);
