@@ -38,6 +38,7 @@
             if (!ch[i].localName
                   || ch[i].localName == "canvas"
                   || ch[i].localName == "div"
+                  || !ch[i].localName
                   || ch[i].attributes["data-aframe-default-light"]
                   || ch[i].attributes["data-aframe-default-camera"]
             ) {
@@ -50,7 +51,10 @@
             }
           }
 //          console.log("childern",$("a-scene").children())
-          $("a-scene").prepend($(data.replace("a-scene","x-scene")).html())
+          // repace a-scene with x-scene to avoid triggering the a-scene callback
+          // (which inserts the defaults, and therefor makes two camera, which confuses
+          //  the THREE.js sub-system).
+          $(data.replace("a-scene","x-scene")).children().prependTo("a-scene");
         }
         setTimeout(loadScene,1000)
       }
