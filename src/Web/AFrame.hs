@@ -7,7 +7,6 @@ import qualified Control.Object as O
 import           Control.Object ((#))
 
 import           Text.AFrame as AFrame
-import qualified Web.Scotty.CRUD as W
 
 --import Network.HTTP.Types
 import Web.Scotty as S
@@ -32,16 +31,6 @@ data AFrameP :: * -> * where
 aframeServer :: String -> Int -> O.Object AFrameP -> IO ()
 aframeServer scene port aframe = do
 
-  let crudObj :: O.Object W.CRUD
-      crudObj = O.Object $ \ case 
-          W.Create {} -> fail "Create not supported"
-          W.Get    v  -> fail "Get not supported"
-          W.Table  _  -> fail "!!!"
---              af <- aframe # GetAFrame
---              return ()
-          W.Update w  -> fail "Update not supported"
-          W.Delete {} -> fail "Delete not supported"
-
 
   let xRequest = do
         S.addHeader "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accep"
@@ -49,38 +38,18 @@ aframeServer scene port aframe = do
         S.addHeader "Access-Control-Allow-Origin"  "*"
 
 
---      ppAFrame :: AFrame -> Text
---      ppAFrame 
-
-      xml :: String -> ActionM ()
-      xml t = do
-         S.setHeader "Content-Type" "text/html; charset=utf-8"
-         raw $ UTF8.fromString $ t
-
       aframeToText :: AFrame -> LT.Text
       aframeToText = LT.pack . showAFrame
       
-      ppConfig :: XML.ConfigPP
-      ppConfig = defaultConfigPP 
-
-
 
   S.scotty port $ do
     S.middleware $ staticPolicy noDots
-
 
     S.get (capture scene) $ do
           xRequest
           s <- liftIO $ do
                   aframe # GetAFrame
           S.html $ aframeToText $ s
-
-
-
-
---    S.middleware logStdoutDev
-
-    W.scottyCRUD "/scene" crudObj
 
     S.get "/" $ S.file "./static/index.html"
     S.get "/assets/:asset" $ do

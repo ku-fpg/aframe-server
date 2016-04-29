@@ -5,6 +5,7 @@ module Main where
 
 import qualified Control.Object as O
 import           Control.Object ((#))
+import           Control.Concurrent.STM
 
 import Text.AFrame
 import Web.AFrame
@@ -18,9 +19,13 @@ main = do
     
 main2 :: AFrame -> IO ()
 main2 a = do
+  var <- newTVarIO a
   print a
   putStrLn $ showAFrame a
+
   aframeServer "/scene" 3947 $ O.Object $ \ case
-    GetAFrame   -> return $ a
+    GetAFrame   -> 
+      atomically $ do
+          readTVar var
     SetAFrame _ -> return ()
 

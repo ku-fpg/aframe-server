@@ -23,7 +23,6 @@ library
                ,       aframe == 0.1.*
                ,       bytestring
                ,       natural-transformation == 0.3
-               ,       scotty-crud == 0.4.0
                ,       scotty == 0.11.*
                ,       text == 1.2.*
                ,       transformers == 0.4.*
@@ -38,6 +37,7 @@ executable aframe-server
   build-depends:       base >=4.8 && <4.9
                ,       aframe == 0.1.*
                ,       aframe-server == 0.1.0.0
+               ,       stm == 2.4.* 
                ,       natural-transformation == 0.3
                
   hs-source-dirs:      server
