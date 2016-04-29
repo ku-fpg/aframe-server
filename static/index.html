@@ -9,30 +9,32 @@
 
   </head>
   <body>
-    <a-scene stats>
-
-  <a-sphere position="0 1.25 -1" radius="1.25" color="#EF2D5E">
-  </a-sphere>
-  <a-box position="-1 0.5 1" rotation="0 45 0" width="1" height="1" depth="1" color="#4CC3D9">
-  </a-box>
-  <a-cylinder position="1 0.75 1" radius="0.5" height="1.5" color="#FFC65D">
-  </a-cylinder>
-  <a-plane rotation="-90 0 0" width="4" height="4" color="#7BC8A4">
-  </a-plane>
-  <a-sky color="#ECECEC">
-  </a-sky>
-
-    </a-scene>
 
   <script>
+    var x = "";
     $(function(){
       console.log("Here");
       var url = window.location
+      
+      // Insert a marker. Above the marker is HTML we have inserted, and below the marker is auto-generated.
+      //      $("a-scene").prepend("<div aframe-marker></div>");
 
-      $.get( "/scene", function( data ) {
-        console.log("got",data)
-//            $("a-scene").prepend ( data );
-      });
+      // Every second, update the scene
+      var sceneText = "";
+      var resetScene = function(data) {
+        if (data == sceneText) {
+          return;
+        }
+        sceneText = data;
+        // Insert the first scene into the DOM, removing any previous scene.
+        $("a-scene").remove();     
+        $("body").prepend(data);
+        setInterval(loadScene,1000)
+      }
+      var loadScene = function() {
+        $.get( "/scene", resetScene);
+      }
+      loadScene()
     });
 
   </script>
