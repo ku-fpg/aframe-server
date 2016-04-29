@@ -5,7 +5,9 @@ module Main where
 
 import qualified Control.Object as O
 import           Control.Object ((#))
+import           Control.Concurrent
 import           Control.Concurrent.STM
+import           Control.Monad
 
 import Text.AFrame
 import Web.AFrame
@@ -23,9 +25,16 @@ main2 a = do
   print a
   putStrLn $ showAFrame a
 
-  aframeServer "/scene" 3947 $ O.Object $ \ case
-    GetAFrame   -> 
-      atomically $ do
-          readTVar var
-    SetAFrame _ -> return ()
+  let obj = O.Object $ \ case
+              GetAFrame   -> atomically $ readTVar var
+              SetAFrame a -> atomically $ writeTVar var a
 
+  forkIO $ forever $ do
+      threadDelay (1000 * 1000)
+      x <- readFile "example.aframe"
+      case readAFrame x of
+        Nothing -> return ()
+        Just a -> obj # SetAFrame a
+
+
+  aframeServer "/scene" 3947 obj
