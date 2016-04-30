@@ -15,17 +15,19 @@ import           Data.String (fromString)
 
 import Text.AFrame
 import Web.AFrame
+import System.Environment 
 
 main :: IO ()
 main = do
-  x <- readFile "example.aframe"
+  [fileName] <- getArgs
+  x <- readFile fileName
   case readAFrame x of
     Nothing -> error "can not read sample file"
-    Just a -> main2 a
+    Just a -> main2 a fileName
 
 
-main2 :: AFrame -> IO ()
-main2 a = do
+main2 :: AFrame -> String -> IO ()
+main2 a fileName = do
   let modifyDB new (fm,ix) =
        case Map.lookup ix fm of
         Nothing -> error "internal error"
@@ -62,8 +64,8 @@ main2 a = do
                                        else retry       -- try again
 
 
-  forkIO $ fileReader "example.aframe" (1000 * 1000) obj
-  forkIO $ fileWriter "saved.aframe" (1000 * 1000) obj
+  forkIO $ fileReader fileName               (1000 * 1000) obj
+  forkIO $ fileWriter (fileName ++ ".saved") (1000 * 1000) obj
   
   aframeServer "/scene" 3947 obj
 

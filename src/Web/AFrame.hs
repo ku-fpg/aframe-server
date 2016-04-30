@@ -56,7 +56,6 @@ aframeServer scene port aframe = do
       
 
   S.scotty port $ do
-    S.middleware $ staticPolicy noDots
     S.middleware $ logStdoutDev
 
     S.get (capture scene) $ do
@@ -74,8 +73,13 @@ aframeServer scene port aframe = do
 
 
     S.get "/" $ S.file "./static/index.html"
+
+
+    S.middleware $ staticPolicy noDots
+{-
     S.get "/assets/:asset" $ do
       error "add asset support"
+-}
 {-
       v <- param "asset"
       case v of

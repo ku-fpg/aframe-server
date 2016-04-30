@@ -1,0 +1,12 @@
+    <a-scene>
+      <a-assets>
+        <img id="lake" src="assets/lake.jpg">
+        <img id="pdx" src="assets/portland.png">
+        <a-asset-item id="sculpture" src="assets/sculpture.dae"></a-asset-item>
+      </a-assets>
+
+      <a-sky src="#lake"></a-sky>
+      <a-collada-model src="#sculpture" position="0 0 -2"></a-collada-model>
+      <a-image src="#pdx" width="10" height="5" position="-2 1.2 1.2"
+               scale="0.2 0.2 0.2"></a-image>
+    </a-scene>
