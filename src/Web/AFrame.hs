@@ -21,6 +21,8 @@ import           Data.Aeson (ToJSON(..), object, (.=))
 import qualified Data.Aeson as A
 import Data.Monoid ((<>))
 
+import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+
 
 data AFrameP :: * -> * where
   SetAFrame       :: AFrame -> AFrameP ()
@@ -46,6 +48,7 @@ aframeServer scene port aframe = do
         S.addHeader "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accep"
         S.addHeader "Access-Control-Allow-Methods" "POST, GET, PUT, DELETE, OPTIONS"
         S.addHeader "Access-Control-Allow-Origin"  "*"
+        S.addHeader "Cache-Control" "no-cache, no-store, must-revalidate"
 
 
       aframeToText :: AFrame -> LT.Text
@@ -54,6 +57,7 @@ aframeServer scene port aframe = do
 
   S.scotty port $ do
     S.middleware $ staticPolicy noDots
+    S.middleware $ logStdoutDev
 
     S.get (capture scene) $ do
           xRequest

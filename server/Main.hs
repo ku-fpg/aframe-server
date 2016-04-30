@@ -26,12 +26,14 @@ main = do
 
 main2 :: AFrame -> IO ()
 main2 a = do
-  let modifyAFrame a (fm,ix) = (Map.insert ix' a' fm,ix')
-        where ix' = succ ix
-              a'  = setAttribute "version" (fromString $ show ix') a
+  let modifyDB new (fm,ix) =
+       case Map.lookup ix fm of
+        Nothing -> error "internal error"
+        Just a | new == a  -> (fm,ix)   -- ignore
+               | otherwise -> let ix' = succ ix
+                              in (Map.insert ix' new fm,ix')
 
-
-  var <- newTVarIO $ modifyAFrame a $ (Map.empty,0)
+  var <- newTVarIO $ (Map.singleton 0 a, 0)
 
   print a
   putStrLn $ showAFrame a
@@ -41,13 +43,12 @@ main2 a = do
                                   (fm,ix) <- readTVar var
                                   case Map.lookup ix fm of
                                     Nothing -> error "internal error"
-                                    Just v -> do
-                                      return v
+                                    Just v -> return $ setAttribute "version" (fromString $ show ix) $ v
 
               SetAFrame a -> atomically $ do
                                   (fm,ix) <- readTVar var
                                   -- version tag always overwritten on SetAFrame
-                                  writeTVar var $ modifyAFrame a (fm,ix)
+                                  writeTVar var $ modifyDB a (fm,ix)
 
               GetAFrameChange (Property p) tm -> do
                             timer <- registerDelay (1000 * tm)

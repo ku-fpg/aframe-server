@@ -38,7 +38,7 @@
             if (!ch[i].localName
                   || ch[i].localName == "canvas"
                   || ch[i].localName == "div"
-                  || !ch[i].localName
+                  || !ch[i].attributes
                   || ch[i].attributes["data-aframe-default-light"]
                   || ch[i].attributes["data-aframe-default-camera"]
             ) {
@@ -55,14 +55,32 @@
           // (which inserts the defaults, and therefor makes two camera, which confuses
           //  the THREE.js sub-system). Note replace only replaces the *first* 
           // a-scene of the string, so will not effect any properties.
-          $(data.replace("a-scene","x-scene")).children().prependTo("a-scene");
+          var xml = $(data.replace("a-scene","x-scene"));
+          console.log(xml)
+          xml.children().prependTo("a-scene");
+          $("a-scene").attr("version",xml.attr("version"))  // update the version number
         }
         setTimeout(loadScene,1000)
       }
-      var loadScene = function() {
-        $.get( "/scene", resetScene);
+      var updateScene = function(d) {
+        console.log("updateScene",d)
+        if (d.change && d.change == "HEAD") {
+          return loadScene();
+        } else {
+          loadScene("RELOAD");
+        }
       }
-      loadScene()
+      var loadScene = function(ty) {
+        var version = $("a-scene").attr("version");
+        if (version == undefined || ty == "RELOAD") {
+          // do this the slow way
+          $.get( "/scene", resetScene);
+        } else {
+          // check for changes
+          $.getJSON( "/scene/" + version, updateScene);          
+        }
+      }
+      loadScene("RELOAD")
     });
 
   </script>
