@@ -43,10 +43,22 @@ main2 a = do
                                     Nothing -> error "internal error"
                                     Just v -> do
                                       return v
+
               SetAFrame a -> atomically $ do
                                   (fm,ix) <- readTVar var
                                   -- version tag always overwritten on SetAFrame
                                   writeTVar var $ modifyAFrame a (fm,ix)
+
+              GetAFrameChange (Property p) tm -> do
+                            timer <- registerDelay (1000 * tm)
+                            atomically $ do
+                                  (fm,ix) <- readTVar var
+                                  ping <- readTVar timer
+                                  if T.pack (show ix) /= p 
+                                  then return RELOAD
+                                  else if ping 
+                                       then return HEAD -- timeout
+                                       else retry       -- try again
 
 
   forkIO $ fileReader "example.aframe" (1000 * 1000) obj
