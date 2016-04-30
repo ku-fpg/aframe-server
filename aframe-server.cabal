@@ -37,7 +37,9 @@ executable aframe-server
   build-depends:       base >=4.8 && <4.9
                ,       aframe == 0.1.*
                ,       aframe-server == 0.1.0.0
+               ,       containers == 0.5.*
                ,       stm == 2.4.* 
+               ,       text == 1.2.*
                ,       natural-transformation == 0.3
                
   hs-source-dirs:      server
