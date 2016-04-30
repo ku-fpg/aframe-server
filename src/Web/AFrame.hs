@@ -16,15 +16,25 @@ import qualified Data.ByteString.Lazy.UTF8 as UTF8
 import           Control.Monad.IO.Class (liftIO)
 import Text.XML.Light as XML
 import qualified Data.Text.Lazy as LT
+import qualified Data.Text as T
+import           Data.Aeson (ToJSON(..), object, (.=))
+import qualified Data.Aeson as A
+import Data.Monoid ((<>))
 
 
 data AFrameP :: * -> * where
-  SetAFrame :: AFrame -> AFrameP ()
-  GetAFrame ::           AFrameP AFrame
+  SetAFrame       :: AFrame -> AFrameP ()
+  GetAFrame       ::           AFrameP AFrame
+  GetAFrameChange :: Property -> Int -> AFrameP Change  -- timeout time in ms (1/1000 seconds)
 
--- :: Object
+data Change = HEAD    -- already at latest, signals a timeout
+            | RELOAD  -- change is complex; please reload entire model
 
-
+instance ToJSON Change where
+    -- this generates a Value
+    toJSON HEAD   = object ["change" .= ("HEAD" :: String)]
+    toJSON RELOAD = object ["change" .= ("RELOAD" :: String)]
+        
 -- This entry point generates a server that handles the AFrame.
 -- It never terminates, but can be started in a seperate thread.
 
@@ -50,6 +60,14 @@ aframeServer scene port aframe = do
           s <- liftIO $ do
                   aframe # GetAFrame
           S.html $ aframeToText $ s
+
+    S.get (capture (scene <> "/:version")) $ do
+          xRequest
+          v <- param "version"
+          s <- liftIO $ do
+                  aframe # GetAFrameChange (Property v) 3000
+          S.json $ s
+
 
     S.get "/" $ S.file "./static/index.html"
     S.get "/assets/:asset" $ do
