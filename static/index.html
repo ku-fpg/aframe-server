@@ -53,7 +53,8 @@
 //          console.log("childern",$("a-scene").children())
           // repace a-scene with x-scene to avoid triggering the a-scene callback
           // (which inserts the defaults, and therefor makes two camera, which confuses
-          //  the THREE.js sub-system).
+          //  the THREE.js sub-system). Note replace only replaces the *first* 
+          // a-scene of the string, so will not effect any properties.
           $(data.replace("a-scene","x-scene")).children().prependTo("a-scene");
         }
         setTimeout(loadScene,1000)
