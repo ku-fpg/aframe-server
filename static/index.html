@@ -5,20 +5,69 @@
     <title>Hello, World! • A-Frame</title>
     <meta name="description" content="Hello, World! • A-Frame">
     <script src="https://aframe.io/releases/0.2.0/aframe.min.js"></script>
-    <script src="https://code.jquery.com/jquery-2.2.3.min.js"   integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js"   
+            integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   
+            crossorigin="anonymous"></script>
+    <script type='text/javascript'    
+            src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js'></script>
 
   </head>
   <body>
 
   <script>
     var x = "";
+    var gui;
     $(function(){
+      gui    = new dat.GUI();
+      active = { entity: "#"
+               ,      x: 0
+               ,      y: 0
+               ,      z: 0
+               }
+
       console.log("Here");
+      debug = {}
       var url = window.location
       
       // Insert a marker. Above the marker is HTML we have inserted, and below the marker is auto-generated.
       //      $("a-scene").prepend("<div aframe-marker></div>");
 
+      var reloadGUI = function() {
+        // We already have a gui object
+        var ids = []
+        $("a-scene [id]").each(function(x,y) { ids.push($(y).attr("id")); });
+        if (ids.length == 0) {
+          return
+        }
+        console.log(ids)
+
+        var changeEntity = function(value) {
+          console.log("reloadGUI.entity",value,$("#" + value))
+          var me = $("#" + value);
+          var position = me[0].getAttribute("position")
+          if (position == null) {
+            position = {x: 0, y: 0, z: 0};
+          }
+          active.x = position.x
+          active.y = position.y
+          active.z = position.z
+        };
+        var changePosition = function(value) {
+          var me = $("#" + active.entity);
+          me[0].setAttribute("position",{x : active.x, y : active.y, z : active.z})
+        }
+        active.entity = ids[0]
+        changeEntity(active.entity)
+        reloadGUI.entity = gui.add(active, 'entity', ids );
+        reloadGUI.entity.onChange(changeEntity);
+        reloadGUI.position = gui.addFolder("Position")
+        reloadGUI.x = reloadGUI.position.add(active,'x').listen().onChange(changePosition);
+        reloadGUI.y = reloadGUI.position.add(active,'y').listen().onChange(changePosition);
+        reloadGUI.z = reloadGUI.position.add(active,'z').listen().onChange(changePosition);
+//        reloadGUI.entity.add(active,'entity', ['A','B'])
+      }
+
+      debug.reloadGUI = reloadGUI
       // Every second, update the scene
       var sceneText = "";
       var resetScene = function(data) {
@@ -60,6 +109,7 @@
           xml.children().prependTo("a-scene");
           $("a-scene").attr("version",xml.attr("version"))  // update the version number
         }
+        reloadGUI()
         setTimeout(loadScene,1000)
       }
       var updateScene = function(d) {
