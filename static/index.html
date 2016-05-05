@@ -19,11 +19,37 @@
     var gui;
     $(function(){
       gui    = new dat.GUI();
+      var defaults =
+               { position: new THREE.Vector3( 0, 0, 0 )
+               , rotation: new THREE.Vector3( 0, 0, 0 )
+               , scale:    new THREE.Vector3( 1, 1, 1 )
+               };
+      var steps =
+               { position: 0.025
+               , rotation: 1
+               , scale:    0.1
+               };
+
       active = { entity: "#"
-               ,      x: 0
-               ,      y: 0
-               ,      z: 0
+               , position: defaults.position.clone()
+               , rotation: defaults.rotation.clone()
+               , scale:    defaults.scale.clone()
                }
+             
+      var changePosition = function(value) {
+        var me = $("#" + active.entity);
+        me[0].setAttribute("position",active.position)
+        me[0].setAttribute("rotation",active.rotation)
+        me[0].setAttribute("scale",active.scale)
+      }
+      for (i in defaults) {
+        var folder = gui.addFolder(i)
+        var xyz = ['x','y','z']
+        for(j in xyz) {
+          console.log(i,j,active[i])
+          folder.add(active[i],xyz[j]).step(steps[i]).listen().onChange(changePosition);
+        }
+      }
 
       console.log("Here");
       debug = {}
@@ -44,26 +70,32 @@
         var changeEntity = function(value) {
           console.log("reloadGUI.entity",value,$("#" + value))
           var me = $("#" + value);
+          function fillAttr(attr) {
+            var a = me[0].getAttribute(attr)
+            if (a == null) {
+              a = defaults[attr]
+            }
+            for (i in active[attr]) {
+              active[attr][i] = a[i]
+            }
+          }
+          fillAttr("position")
+          fillAttr("rotation")
+          fillAttr("scale")
+/*
           var position = me[0].getAttribute("position")
           if (position == null) {
             position = {x: 0, y: 0, z: 0};
           }
-          active.x = position.x
-          active.y = position.y
-          active.z = position.z
+          active.position.x = position.x
+          active.position.y = position.y
+          active.position.z = position.z
+*/
         };
-        var changePosition = function(value) {
-          var me = $("#" + active.entity);
-          me[0].setAttribute("position",{x : active.x, y : active.y, z : active.z})
-        }
         active.entity = ids[0]
         changeEntity(active.entity)
         reloadGUI.entity = gui.add(active, 'entity', ids );
         reloadGUI.entity.onChange(changeEntity);
-        reloadGUI.position = gui.addFolder("Position")
-        reloadGUI.x = reloadGUI.position.add(active,'x').listen().onChange(changePosition);
-        reloadGUI.y = reloadGUI.position.add(active,'y').listen().onChange(changePosition);
-        reloadGUI.z = reloadGUI.position.add(active,'z').listen().onChange(changePosition);
 //        reloadGUI.entity.add(active,'entity', ['A','B'])
       }
 
