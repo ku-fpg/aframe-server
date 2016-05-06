@@ -74,6 +74,9 @@ aframeServer scene port aframe = do
 
     S.get "/" $ S.file "./static/index.html"
 
+    S.get "/js/:file" $ do
+          v <- param "file"      
+          S.file ("./static/js/" <> v)
 
     S.middleware $ staticPolicy noDots
 {-
