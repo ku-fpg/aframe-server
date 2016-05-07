@@ -20,7 +20,53 @@
 
   <script>
     var x = "";
+    var debuging = {};
     var gui;
+
+    // We describe specific elements using the path from the a-scene,
+    // as a list of children #'s, from top to bottom.
+    // This returns a jquery selector
+    function sceneElementSelector(o) {
+      if (o == "") { return "a-scene"; }
+      return "a-scene > " + o.split(".").map(function(v) { 
+        return ":nth-child(" + v + ")"
+      }).join(" > ");
+    }
+
+    // This returns a textual descriptor
+   function sceneElementDescription(o) {
+     if (o == "") { return ""; }     
+     var r = o.split(".").map(function(v) { 
+        var i = (v < 10?" ":"") + v;
+        return i; 
+      }).join(" . ") + " -";
+      var j = $(sceneElementSelector(o));
+      if (j.prop("tagName")) {
+        r += " " + j.prop("tagName");
+      }
+      if (j.attr("id")) {
+        r += " #" + j.attr("id")
+      }
+      return r
+    }
+
+    function sceneElements() {
+      var r = []
+      function rec(o) {
+        var ch = $(sceneElementSelector(o)).children();
+        for(var i = 0;i < ch.length;i++) {
+          var p = (o == "")?(o + (i+1)):(o + "." + (i+1))
+          if ($(sceneElementSelector(p)).prop("tagName").substring(0,2) != "A-") {
+            return;
+          }
+          r.push(p)
+          rec(p)
+        }        
+      }
+      rec([])
+      return r
+    }
+
     $(function(){
       gui    = new dat.GUI();
       var defaults =
