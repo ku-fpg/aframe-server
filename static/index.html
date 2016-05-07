@@ -136,6 +136,7 @@
         });
         active.entity = "1"
         changeEntity(se[0])
+        reloadGUI.entity && gui.remove(reloadGUI.entity)
         reloadGUI.entity = gui.add(active, 'entity', entityDict );
         reloadGUI.entity.onChange(changeEntity);
 //        reloadGUI.entity.add(active,'entity', ['A','B'])
