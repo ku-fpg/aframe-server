@@ -27,6 +27,7 @@
     // as a list of children #'s, from top to bottom.
     // This returns a jquery selector
     function sceneElementSelector(o) {
+      console.log("sceneElementSelector",o)
       if (o == "") { return "a-scene"; }
       return "a-scene > " + o.split(".").map(function(v) { 
         return ":nth-child(" + v + ")"
@@ -51,16 +52,16 @@
     }
 
     function sceneElements() {
+      console.log("sceneElements")
       var r = []
       function rec(o) {
         var ch = $(sceneElementSelector(o)).children();
         for(var i = 0;i < ch.length;i++) {
           var p = (o == "")?(o + (i+1)):(o + "." + (i+1))
-          if ($(sceneElementSelector(p)).prop("tagName").substring(0,2) != "A-") {
-            return;
+          if ($(sceneElementSelector(p)).prop("tagName").substring(0,2) == "A-") {
+            r.push(p)
+            rec(p)
           }
-          r.push(p)
-          rec(p)
         }        
       }
       rec("")
