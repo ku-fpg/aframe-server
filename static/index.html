@@ -63,7 +63,7 @@
           rec(p)
         }        
       }
-      rec([])
+      rec("")
       return r
     }
 
@@ -80,18 +80,19 @@
                , scale:    0.1
                };
 
-      active = { entity: "#"
+      active = { entity: "1"
                , position: defaults.position.clone()
                , rotation: defaults.rotation.clone()
                , scale:    defaults.scale.clone()
                }
              
       var changePosition = function(value) {
-        var me = $("#" + active.entity);
+        var me = $(sceneElementSelector(active.entity));
         me[0].setAttribute("position",active.position)
         me[0].setAttribute("rotation",active.rotation)
         me[0].setAttribute("scale",active.scale)
       }
+
       for (i in defaults) {
         var folder = gui.addFolder(i)
         var xyz = ['x','y','z']
@@ -110,16 +111,11 @@
 
       var reloadGUI = function() {
         // We already have a gui object
-        var ids = []
-        $("a-scene [id]").each(function(x,y) { ids.push($(y).attr("id")); });
-        if (ids.length == 0) {
-          return
-        }
-        console.log(ids)
 
         var changeEntity = function(value) {
-          console.log("reloadGUI.entity",value,$("#" + value))
-          var me = $("#" + value);
+          console.log("reloadGUI.entity",value)
+          active.entity = value;
+          var me = $(sceneElementSelector(value));
           function fillAttr(attr) {
             var a = me[0].getAttribute(attr)
             if (a == null) {
@@ -132,19 +128,15 @@
           fillAttr("position")
           fillAttr("rotation")
           fillAttr("scale")
-/*
-          var position = me[0].getAttribute("position")
-          if (position == null) {
-            position = {x: 0, y: 0, z: 0};
-          }
-          active.position.x = position.x
-          active.position.y = position.y
-          active.position.z = position.z
-*/
         };
-        active.entity = ids[0]
-        changeEntity(active.entity)
-        reloadGUI.entity = gui.add(active, 'entity', ids );
+        var se = sceneElements()
+        var entityDict = {}
+        se.map(function(v) {
+          entityDict[sceneElementDescription(v)] = v
+        });
+        active.entity = "1"
+        changeEntity(se[0])
+        reloadGUI.entity = gui.add(active, 'entity', entityDict );
         reloadGUI.entity.onChange(changeEntity);
 //        reloadGUI.entity.add(active,'entity', ['A','B'])
       }
