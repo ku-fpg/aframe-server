@@ -12,4 +12,4 @@ PUT /scene/ABC | Sets resource #ABC   | XML
 
 Assets
  * Fox from http://pngimg.com/img/animals/fox, free download
- * 
+ * tree1 and 2, etc, taken from aframe-gamepad-controls, which was taken from aframe demo
