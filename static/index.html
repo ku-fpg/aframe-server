@@ -69,6 +69,20 @@
 
     $(function(){
       gui    = new dat.GUI();
+      dat.GUI.prototype.removeFolder = function(name) {
+        var folder = this.__folders[name];
+        if (!folder) {
+          return;
+        }
+        folder.close();
+        this.__ul.removeChild(folder.domElement.parentNode);
+        delete this.__folders[name];
+        this.onResize();
+      }
+      console.log("Here");
+      debug = {}
+      var url = window.location
+
       var defaults =
                { position: new THREE.Vector3( 0, 0, 0 )
                , rotation: new THREE.Vector3( 0, 0, 0 )
@@ -85,26 +99,7 @@
                , rotation: defaults.rotation.clone()
                , scale:    defaults.scale.clone()
                }
-             
-      var changePosition = function(value) {
-        var me = $(sceneElementSelector(active.entity));
-        me[0].setAttribute("position",active.position)
-        me[0].setAttribute("rotation",active.rotation)
-        me[0].setAttribute("scale",active.scale)
-      }
 
-      for (i in defaults) {
-        var folder = gui.addFolder(i)
-        var xyz = ['x','y','z']
-        for(j in xyz) {
-          console.log(i,j,active[i])
-          folder.add(active[i],xyz[j]).step(steps[i]).listen().onChange(changePosition);
-        }
-      }
-
-      console.log("Here");
-      debug = {}
-      var url = window.location
       
       // Insert a marker. Above the marker is HTML we have inserted, and below the marker is auto-generated.
       //      $("a-scene").prepend("<div aframe-marker></div>");
@@ -136,9 +131,33 @@
         });
         active.entity = "1"
         changeEntity(se[0])
+  
+        var changePosition = function(value) {
+          var me = $(sceneElementSelector(active.entity));
+          me[0].setAttribute("position",active.position)
+          me[0].setAttribute("rotation",active.rotation)
+          me[0].setAttribute("scale",active.scale)
+        }
+
+        // Clear the inspector
         reloadGUI.entity && gui.remove(reloadGUI.entity)
+        for (var i in defaults) {
+          gui.removeFolder(i)
+        }
+        
+        // And refill it
         reloadGUI.entity = gui.add(active, 'entity', entityDict );
         reloadGUI.entity.onChange(changeEntity);
+        for (var i in defaults) {
+          var folder = gui.addFolder(i)
+          var xyz = ['x','y','z']
+          for(var j in xyz) {
+            console.log(i,j,active[i])
+            folder.add(active[i],xyz[j]).step(steps[i]).listen().onChange(changePosition);
+          }
+        }
+
+
 //        reloadGUI.entity.add(active,'entity', ['A','B'])
       }
 
