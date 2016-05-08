@@ -14,7 +14,6 @@
             crossorigin="anonymous"></script>
     <script type='text/javascript'    
             src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js'></script>
-
   </head>
   <body>
 
@@ -88,6 +87,7 @@
                { position: new THREE.Vector3( 0, 0, 0 )
                , rotation: new THREE.Vector3( 0, 0, 0 )
                , scale:    new THREE.Vector3( 1, 1, 1 )
+               , visible:  true
                };
       var steps =
                { position: 0.025
@@ -99,6 +99,7 @@
                , position: defaults.position.clone()
                , rotation: defaults.rotation.clone()
                , scale:    defaults.scale.clone()
+               , visible:  defaults.visible
                }
 
       
@@ -111,12 +112,15 @@
         var changeEntity = function(value) {
           console.log("reloadGUI.entity",value)
           active.entity = value;
+          $("[active-entity]").removeAttr("active-entity")
           var me = $(sceneElementSelector(value));
+          me.attr("active-entity","true")
           function fillAttr(attr) {
             var a = me[0].getAttribute(attr)
             if (a == null) {
               a = defaults[attr]
             }
+            for (var i in active[attr]) {
               active[attr][i] = a[i]
             }
           }
@@ -137,23 +141,33 @@
           me[0].setAttribute("position",active.position)
           me[0].setAttribute("rotation",active.rotation)
           me[0].setAttribute("scale",active.scale)
+          me[0].setAttribute("visible",active.visible)
         }
 
         // Clear the inspector
         reloadGUI.entity && gui.remove(reloadGUI.entity)
         for (var i in defaults) {
-          gui.removeFolder(i)
+          // TODO: if/then/else
+          if (typeof(defaults[i]) == "boolean") {
+            reloadGUI[i] && gui.remove(reloadGUI[i])
+          } else {
+            gui.removeFolder(i)            
+          }
         }
         
         // And refill it
         reloadGUI.entity = gui.add(active, 'entity', entityDict );
         reloadGUI.entity.onChange(changeEntity);
         for (var i in defaults) {
-          var folder = gui.addFolder(i)
-          var xyz = ['x','y','z']
-          for(var j in xyz) {
-            console.log(i,j,active[i])
-            folder.add(active[i],xyz[j]).step(steps[i]).listen().onChange(changePosition);
+          if (typeof(defaults[i]) == "boolean") {
+            reloadGUI[i] = gui.add(active,i).listen().onChange(changePosition);
+          } else { 
+            var folder = gui.addFolder(i)
+            var xyz = ['x','y','z'] // TODO: look this up from a table.
+            for(var j in xyz) {
+              console.log(i,j,active[i])
+              folder.add(active[i],xyz[j]).step(steps[i]).listen().onChange(changePosition);
+            }
           }
         }
 
