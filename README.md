@@ -3,7 +3,7 @@ Shared server-based space for A-Frame scenes.
 
 
 COMMAND    | Action                   | Format
------------+--------------------------+--------
+-----------|--------------------------|--------
 GET /scene | Gets the whole scene     | XML
 POST /scene | updates the whole scene | XML
 GET /scene/ABC | Gets resource #ABC   | XML
