@@ -10,8 +10,8 @@ aframe-server <path-to-scene.html>
 ### Regular web serving
 
 COMMAND         | Action                   | Format | Notes
-----------------+--------------------------+--------+-----
-GET /           | Gets the *latest* scene  | HTML   | Latest AFrame is injected
+----------------|--------------------------|--------|-----
+GET /           | Gets the *latest* scene  | HTML   | Latest `AFrame` is injected
 GET /js/foo.js  | Get a js file            | JS     | Must be in same root as path-to-scene
 GET /css/foo.css| Get a css file           | CSS    | etc, etc.
 
