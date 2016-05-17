@@ -1,6 +1,24 @@
 # aframe-server
 Shared server-based space for A-Frame scenes.
 
+## usage
+
+````
+aframe-server <path-to-scene.html>
+````
+
+### Regular web serving
+
+COMMAND    | Action                   | Format
+-----------+--------------------------+--------
+GET /      | Gets the scene           | HTML
+GET /js/foo.js | Get a js file        | JS
+
+
+The path `/static` is reserved for internal (typically injected) files.
+
+### CRUD web serving
+
 
 COMMAND    | Action                   | Format
 -----------|--------------------------|--------
