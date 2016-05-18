@@ -7,6 +7,8 @@ Shared server-based space for A-Frame scenes.
 aframe-server <path-to-scene.html>
 ````
 
+Loads server, and stores the internal `a-scene` for modification.
+
 ### Regular web serving
 
 COMMAND         | Action                   | Format | Notes
@@ -24,10 +26,7 @@ The path `/static` is reserved for internal (typically injected) files.
 COMMAND    | Action                   | Format
 -----------|--------------------------|--------
 GET /scene | Gets the whole scene     | XML
-POST /scene | updates the whole scene | XML
-GET /scene/ABC | Gets resource #ABC   | XML
-PUT /scene/ABC | Sets resource #ABC   | XML 
-
+GET /status/N | Ask about version #N  | { "change": "HEAD" or "RELOAD" }
 
 Assets
  * Fox from http://pngimg.com/img/animals/fox, free download
