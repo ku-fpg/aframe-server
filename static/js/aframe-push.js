@@ -64,6 +64,6 @@ $(function(){
       $.getJSON( "/status/" + version, updateScene);          
     }
   }
-  loadScene("RELOAD")
+  loadScene("HEAD")
 });
 
