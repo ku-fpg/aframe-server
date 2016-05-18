@@ -22,11 +22,11 @@ import qualified Data.Aeson as A
 import Data.Monoid ((<>))
 
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
-
+import System.FilePath.Posix as P
 
 data AFrameP :: * -> * where
-  SetAFrame       :: AFrame -> AFrameP ()
-  GetAFrame       ::           AFrameP AFrame
+  SetAFrame       :: AFrame          -> AFrameP ()
+  GetAFrame       ::                    AFrameP AFrame  -- ^ Get the current and/or latest aframe
   GetAFrameChange :: Property -> Int -> AFrameP Change  -- timeout time in ms (1/1000 seconds)
 
 data Change = HEAD    -- already at latest, signals a timeout
@@ -39,10 +39,13 @@ instance ToJSON Change where
         
 -- This entry point generates a server that handles the AFrame.
 -- It never terminates, but can be started in a seperate thread.
+-- The first argument is the name of the file to be server.
+-- The second argument is the port to be served from.
 
 aframeServer :: String -> Int -> O.Object AFrameP -> IO ()
 aframeServer scene port aframe = do
-
+  let dir  = takeDirectory scene
+      file = takeFileName scene
 
   let xRequest = do
         S.addHeader "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accep"
@@ -50,14 +53,13 @@ aframeServer scene port aframe = do
         S.addHeader "Access-Control-Allow-Origin"  "*"
         S.addHeader "Cache-Control" "no-cache, no-store, must-revalidate"
 
-
       aframeToText :: AFrame -> LT.Text
       aframeToText = LT.pack . showAFrame
-      
 
   S.scotty port $ do
     S.middleware $ logStdoutDev
 
+{-
     S.get (capture scene) $ do
           xRequest
           s <- liftIO $ do
@@ -71,14 +73,27 @@ aframeServer scene port aframe = do
                   aframe # GetAFrameChange (Property v) 3000
           S.json $ s
 
+-}
+    S.get "/" $ do
+      -- get the scene html file
+      -- TODO: check to see if there is no HTML wrapper,
+      -- and if not, use a (static) wrapper.
+      txt <- liftIO $ do
+            wrapper <- readFile scene
+            af      <- aframe # GetAFrame
+            return $ injectAFrame af wrapper
+      S.html $ LT.pack $ txt   
 
-    S.get "/" $ S.file "./static/index.html"
+    S.middleware $ staticPolicy (addBase dir)
 
+--      S.file "./static/index.html"
+
+{-
     S.get "/js/:file" $ do
           v <- param "file"      
           S.file ("./static/js/" <> v)
 
-    S.middleware $ staticPolicy noDots
+-}
 {-
     S.get "/assets/:asset" $ do
       error "add asset support"

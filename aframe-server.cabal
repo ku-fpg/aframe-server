@@ -23,6 +23,7 @@ library
                ,       aeson == 0.11.*
                ,       aframe == 0.1.*
                ,       bytestring
+               ,       filepath == 1.4.*
                ,       natural-transformation == 0.3
                ,       scotty == 0.11.*
                ,       text == 1.2.*

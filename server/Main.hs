@@ -67,7 +67,7 @@ main2 a fileName = do
   forkIO $ fileReader fileName               (1000 * 1000) obj
   forkIO $ fileWriter (fileName ++ ".saved") (1000 * 1000) obj
   
-  aframeServer "/scene" 3947 obj
+  aframeServer fileName 3947 obj
 
 fileReader :: String -> Int -> O.Object AFrameP -> IO ()
 fileReader fileName delay obj = loop ""
