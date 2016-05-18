@@ -44,7 +44,7 @@ main :: IO ()
 main = do
     argv <- getArgs
     case getOpt Permute options argv of
-      (o,[n],[]) -> print (foldl (flip id) (defaultOptions n) o)
+      (o,[n],[]) -> main1 (foldl (flip id) (defaultOptions n) o)
       (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
   where header = "Usage: aframe-server [OPTION...] aframe.html"
 
