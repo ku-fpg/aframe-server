@@ -66,7 +66,15 @@ main2 opts a = do
                | otherwise -> let ix' = succ ix
                               in (Map.insert ix' new fm,ix')
 
-  var <- newTVarIO $ (Map.singleton 0 a, 0)
+  -- The DB is a tuple of (map from # to AFrame, and the current #)
+  -- GET gets the current # via lookup
+  -- SET sets a *new/unique* #, if there are changes
+  --   - It is not possible to SET a version without making a change first;
+  --   - A dup update is the identity.
+  -- The version tag is never in the underlying AFrame, but added
+  -- when GET-ing the AFrame, and removed/ignored when SET-ing.
+  -- The act of SET-ing is *asking* for a new version number to be assigned.
+  var :: TVar (Map.Map Int AFrame, Int) <- newTVarIO $ (Map.singleton 0 a, 0)
 
   print a
   putStrLn $ showAFrame a
@@ -83,12 +91,12 @@ main2 opts a = do
                                   -- version tag always overwritten on SetAFrame
                                   writeTVar var $ modifyDB a (fm,ix)
 
-              GetAFrameChange (Property p) tm -> do
+              GetAFrameStatus p tm -> do
                             timer <- registerDelay (1000 * tm)
                             atomically $ do
                                   (fm,ix) <- readTVar var
                                   ping <- readTVar timer
-                                  if T.pack (show ix) /= p 
+                                  if ix /= p 
                                   then return RELOAD
                                   else if ping 
                                        then return HEAD -- timeout

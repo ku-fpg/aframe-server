@@ -26,9 +26,9 @@ import System.FilePath.Posix as P
 import Data.List as L
 
 data AFrameP :: * -> * where
-  SetAFrame       :: AFrame          -> AFrameP ()
-  GetAFrame       ::                    AFrameP AFrame  -- ^ Get the current and/or latest aframe
-  GetAFrameChange :: Property -> Int -> AFrameP Change  -- timeout time in ms (1/1000 seconds)
+  SetAFrame       :: AFrame     -> AFrameP ()
+  GetAFrame       ::               AFrameP AFrame  -- ^ Get the current and/or latest aframe
+  GetAFrameStatus :: Int -> Int -> AFrameP Change  -- ^ version tag, and timeout time in ms
 
 data Change = HEAD    -- already at latest, signals a timeout
             | RELOAD  -- change is complex; please reload entire model
@@ -62,6 +62,7 @@ aframeServer scene port aframe = do
            _   -> c : injectJS 0     cs
       injectJS n []     = []
 
+      -- Not required, because we are in the same domain the whole time???
   let xRequest = do
         S.addHeader "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accep"
         S.addHeader "Access-Control-Allow-Methods" "POST, GET, PUT, DELETE, OPTIONS"
@@ -102,32 +103,9 @@ aframeServer scene port aframe = do
           xRequest
           v <- param "version"
           s <- liftIO $ do
-                  aframe # GetAFrameChange (Property v) 3000
+                  aframe # GetAFrameStatus v 3000
           S.json $ s
 
     S.middleware $ staticPolicy (addBase dir)
-
-{-
-
--}
-
---      S.file "./static/index.html"
-
-{-
-    S.get "/js/:file" $ do
-          v <- param "file"      
-          S.file ("./static/js/" <> v)
-
--}
-{-
-    S.get "/assets/:asset" $ do
-      error "add asset support"
--}
-{-
-      v <- param "asset"
-      case v of
-        () | ".jpg" `isSuffixOf` 
-      S.file "./static/index.html"
--}
 
   return ()
