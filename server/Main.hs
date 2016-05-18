@@ -41,7 +41,7 @@ main2 a fileName = do
   putStrLn $ showAFrame a
 
   let obj = O.Object $ \ case
-              GetAFrame   -> atomically $ do
+              GetAFrame -> atomically $ do
                                   (fm,ix) <- readTVar var
                                   case Map.lookup ix fm of
                                     Nothing -> error "internal error"

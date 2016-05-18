@@ -23,6 +23,7 @@ import Data.Monoid ((<>))
 
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import System.FilePath.Posix as P
+import Data.List as L
 
 data AFrameP :: * -> * where
   SetAFrame       :: AFrame          -> AFrameP ()
@@ -46,6 +47,20 @@ aframeServer :: String -> Int -> O.Object AFrameP -> IO ()
 aframeServer scene port aframe = do
   let dir  = takeDirectory scene
       file = takeFileName scene
+      jss  = [ "https://code.jquery.com/jquery-2.2.3.min.js"
+             , "/static/js/aframe-reloaded.js"
+             , "https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"
+             ]
+
+  let injectJS n cs | "</head>" `L.isPrefixOf` cs = 
+        unlines [ s ++ "  <script src=\"" ++ js ++ "\"></script>"
+                | (s,js) <- ("":repeat spaces) `zip` jss
+                ] ++ spaces ++ cs
+          where spaces = take n $ repeat ' '
+      injectJS n (c:cs) = case c of
+           ' ' -> c : injectJS (n+1) cs
+           _   -> c : injectJS 0     cs
+      injectJS n []     = []
 
   let xRequest = do
         S.addHeader "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accep"
@@ -59,21 +74,6 @@ aframeServer scene port aframe = do
   S.scotty port $ do
     S.middleware $ logStdoutDev
 
-{-
-    S.get (capture scene) $ do
-          xRequest
-          s <- liftIO $ do
-                  aframe # GetAFrame
-          S.html $ aframeToText $ s
-
-    S.get (capture (scene <> "/:version")) $ do
-          xRequest
-          v <- param "version"
-          s <- liftIO $ do
-                  aframe # GetAFrameChange (Property v) 3000
-          S.json $ s
-
--}
     S.get "/" $ do
       -- get the scene html file
       -- TODO: check to see if there is no HTML wrapper,
@@ -81,10 +81,35 @@ aframeServer scene port aframe = do
       txt <- liftIO $ do
             wrapper <- readFile scene
             af      <- aframe # GetAFrame
-            return $ injectAFrame af wrapper
+            return $ injectJS 0 $ injectAFrame af wrapper
       S.html $ LT.pack $ txt   
+   
+    -- support the static files
+    sequence_ 
+      [ S.get (capture js) $ do
+          let fileLocation = tail js
+          S.file $ fileLocation
+      | js <- jss
+      ]
+
+    S.get ("/scene") $ do
+          xRequest
+          s <- liftIO $ do
+                  aframe # GetAFrame
+          S.html $ aframeToText $ s
+
+    S.get ("/status/:version") $ do
+          xRequest
+          v <- param "version"
+          s <- liftIO $ do
+                  aframe # GetAFrameChange (Property v) 3000
+          S.json $ s
 
     S.middleware $ staticPolicy (addBase dir)
+
+{-
+
+-}
 
 --      S.file "./static/index.html"
 

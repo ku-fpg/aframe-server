@@ -218,7 +218,7 @@ $(function(){
       $.get( "/scene", resetScene);
     } else {
       // check for changes
-      $.getJSON( "/scene/" + version, updateScene);          
+      $.getJSON( "/status/" + version, updateScene);          
     }
   }
   loadScene("RELOAD")
