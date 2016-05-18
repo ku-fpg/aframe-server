@@ -48,7 +48,7 @@ aframeServer scene port aframe = do
   let dir  = takeDirectory scene
       file = takeFileName scene
       jss  = [ "https://code.jquery.com/jquery-2.2.3.min.js"
-             , "/static/js/aframe-reloaded.js"
+             , "/static/js/aframe-push.js"
              , "https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"
              ]
 
