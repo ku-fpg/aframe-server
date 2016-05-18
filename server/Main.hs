@@ -1,5 +1,6 @@
-{-# LANGUAGE KindSignatures, GADTs, LambdaCase #-}
+{-# LANGUAGE KindSignatures, GADTs, LambdaCase, DeriveDataTypeable, ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-cse #-}
 
 module Main where
 
@@ -16,18 +17,48 @@ import           Data.String (fromString)
 import Text.AFrame
 import Web.AFrame
 import System.Environment 
+import System.Console.GetOpt
+
+data Options = Options 
+  { -- jsFiles :: [String]
+    scenePath :: FilePath
+  , jsFiles   :: [String]
+  , updateScene :: Bool
+  } deriving (Show)
+
+defaultOptions :: FilePath -> Options
+defaultOptions f = Options
+  { scenePath   = f
+  , jsFiles     = []
+  , updateScene = False
+  }
+
+options :: [OptDescr (Options -> Options)]
+options = 
+  [ Option [] ["js"]
+        (ReqArg (\ d opts -> opts { jsFiles = jsFiles opts ++ [d] }) "path-or-URL")
+        "javascript to include"
+  ]
 
 main :: IO ()
 main = do
-  [fileName] <- getArgs
-  x <- readFile fileName
+    argv <- getArgs
+    case getOpt Permute options argv of
+      (o,[n],[]) -> print (foldl (flip id) (defaultOptions n) o)
+      (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
+  where header = "Usage: aframe-server [OPTION...] aframe.html"
+
+main1 :: Options -> IO ()
+main1 opts = do
+  x <- readFile (scenePath opts)
   case readAFrame x of
     Nothing -> error "can not read sample file"
-    Just a -> main2 a fileName
+    Just a -> main2 opts a
 
+main2 :: Options -> AFrame -> IO ()
+main2 opts a = do
+  let fileName = scenePath opts
 
-main2 :: AFrame -> String -> IO ()
-main2 a fileName = do
   let modifyDB new (fm,ix) =
        case Map.lookup ix fm of
         Nothing -> error "internal error"
