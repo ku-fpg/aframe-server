@@ -1,4 +1,4 @@
-{-# LANGUAGE KindSignatures, GADTs, LambdaCase #-}
+{-# LANGUAGE KindSignatures, GADTs, LambdaCase, ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Web.AFrame where
@@ -101,7 +101,7 @@ aframeServer scene port aframe = do
 
     S.get ("/status/:version") $ do
           xRequest
-          v <- param "version"
+          v :: Int <- param "version"
           s <- liftIO $ do
                   aframe # GetAFrameStatus v 3000
           S.json $ s
