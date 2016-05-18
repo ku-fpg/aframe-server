@@ -20,24 +20,29 @@ import System.Environment
 import System.Console.GetOpt
 
 data Options = Options 
-  { -- jsFiles :: [String]
-    scenePath :: FilePath
+  { scenePath :: FilePath
   , jsFiles   :: [String]
-  , updateScene :: Bool
+  , pushPull  :: PushPull
   } deriving (Show)
 
+data PushPull = Push | Pull
+ deriving Show
+ 
 defaultOptions :: FilePath -> Options
 defaultOptions f = Options
   { scenePath   = f
   , jsFiles     = []
-  , updateScene = False
-  }
+  , pushPull    = Push
+  } 
 
 options :: [OptDescr (Options -> Options)]
 options = 
   [ Option [] ["js"]
         (ReqArg (\ d opts -> opts { jsFiles = jsFiles opts ++ [d] }) "path-or-URL")
         "javascript to include"
+  , Option [] ["pull"]
+        (NoArg (\ opts -> opts { pushPull = Pull }))
+        "pull DOM changes into original aframe.html file"
   ]
 
 main :: IO ()
