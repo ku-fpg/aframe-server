@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My A-Frame Scene</title>
+    <script src="https://aframe.io/releases/0.2.0/aframe.min.js"></script>
+    <script src="js/aframe-orbit-controls-component.js"></script> 
+</head>
+ 
+<body>
+    <a-scene>
+      <a-camera target="#target" distance="9" orbit-controls look-controls-enabled=false wasd-controls wasd-controls-enabled=true position="0 0 0" ></a-camera>
+      <a-cube id="target" position="0 0 0" radius="1" color="#EF2D5E"></a-sphere>
+      <a-sky src="https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg"></a-sky>
+    </a-scene>
+</body>
+</html>
