@@ -11,12 +11,13 @@ Loads server, and stores the internal `a-scene` for modification.
 
 ### Regular web serving
 
-COMMAND         | Action                   | Format | Notes
-----------------|--------------------------|--------|-----
-GET /           | Gets the *latest* scene  | HTML   | Latest `AFrame` is injected
-GET /js/foo.js  | Get a js file            | JS     | Must be in same root as path-to-scene
-GET /css/foo.css| Get a css file           | CSS    | etc, etc.
-
+COMMAND               | Action                         | Format | Notes
+----------------------|--------------------------------|--------|-----
+GET /                 | Gets the *latest* scene        | HTML   | Latest `AFrame` is injected into a static webpage
+GET /scene.html       | Gets the *latest* scene        | HTML   | Scene is automatically updated
+GET /editable.html    | Gets the *latest* scene        | HTML   | Scene changes are pull'ed back into the server
+GET /gui.html         | editable, with a gui inspector | HTML   | Scene changes are pushed back
+GET /js/foo.js  (etc) | Get a js file                  | JS     | Must be in same root as path-to-scene
 
 The path `/static` is reserved for internal (typically injected) files.
 
