@@ -42,15 +42,18 @@ instance ToJSON Change where
 -- It never terminates, but can be started in a seperate thread.
 -- The first argument is the name of the file to be server.
 -- The second argument is the port to be served from.
+-- The thrid argument is a list of URLs to serve up as 
 
-aframeServer :: String -> Int -> O.Object AFrameP -> IO ()
-aframeServer scene port aframe = do
+aframeServer :: String -> Int -> [String] -> O.Object AFrameP -> IO ()
+aframeServer scene port jssExtras aframe = do
   let dir  = takeDirectory scene
       file = takeFileName scene
       jss  = [ "https://code.jquery.com/jquery-2.2.3.min.js"
              , "/static/js/aframe-push.js"
-             , "https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"
-             ]
+             ] ++ jssExtras
+
+               --  use with aframe-pull (TODO)
+               -- , "https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"
 
   let injectJS n cs | "</head>" `L.isPrefixOf` cs = 
         unlines [ s ++ "  <script src=\"" ++ js ++ "\"></script>"
