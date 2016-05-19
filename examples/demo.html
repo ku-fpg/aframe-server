@@ -13,13 +13,13 @@
       <a-assets>
         <a-asset-item id="tree1" src="assets/tree1.dae"></a-asset-item>
         <a-asset-item id="tree2" src="assets/tree2.dae"></a-asset-item>
-        
       </a-assets>
 
       <!--
         Camera + Gamepad controls
         Button 0 is "A" on an Xbox controller.
       -->
+      <a-entity>
       <a-entity camera
                 position="0 1 0"
                 look-controls
@@ -27,20 +27,21 @@
                 gamepad-controls="invertAxisY: true"
                 >
       </a-entity>
+      </a-entity>
 
       <!--
         Example scene, blatantly copied from an official example:
         https://github.com/aframevr/aframe/tree/master/examples/template-models
       -->
       <a-collada-model src="#tree1" id="3d345d" position="1 0 -1" rotation="0 30 0" scale="1.4 1.4 1.4"></a-collada-model>
-      <a-collada-model src="assets/tree2.dae" position="2.5 0 1.5" rotation="0 25 0" scale="1.4 1.4 1.4"></a-collada-model>
-      <a-collada-model src="assets/tree2.dae" position="-2 0 -4" rotation="0 60 0" scale="1.5 1.5 1.5"></a-collada-model>
+      <a-collada-model src="#tree2" position="2.5 0 1.5" rotation="0 25 0" scale="1.4 1.4 1.4"></a-collada-model>
+      <a-collada-model src="#tree2" position="-2 0 -4" rotation="0 60 0" scale="1.5 1.5 1.5"></a-collada-model>
       <a-collada-model src="#tree1" position="-8 0 -9" rotation="0 60 0" scale="1.4 1.4 1.4"></a-collada-model>
-      <a-collada-model src="assets/tree2.dae" position="-12 0 3" rotation="0 60 0" scale="1.5 1.5 1.5"></a-collada-model>
+      <a-collada-model src="#tree2" position="-12 0 3" rotation="0 60 0" scale="1.5 1.5 1.5"></a-collada-model>
       <a-collada-model src="#tree1" position="-7 0 -3" rotation="0 60 0" scale="1.3 1.3 1.3"></a-collada-model>
-      <a-collada-model src="assets/tree2.dae" position="-4 0 1" rotation="0 10 0" scale="1.4 1.4 1.4"></a-collada-model>
+      <a-collada-model src="#tree2" position="-4 0 1" rotation="0 10 0" scale="1.4 1.4 1.4"></a-collada-model>
       <a-collada-model src="#tree1" position="-5 0 5" rotation="0 45 0" scale="1.5 1.5 1.5"></a-collada-model>      
-      <a-collada-model src="assets/tree2.dae" position="0 0 9" rotation="0 220 0" scale="1.6 1.6 1.6"></a-collada-model>
+      <a-collada-model src="#tree2" position="0 0 9" rotation="0 220 0" scale="1.6 1.6 1.6"></a-collada-model>
       <a-entity position="-7 0 10">
         <a-collada-model src="#tree1" rotation="0 0 0" scale="1.4 2.0 1.4">
           <a-animation attribute="rotation"
