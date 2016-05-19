@@ -20,9 +20,10 @@ import System.Environment
 import System.Console.GetOpt
 
 data Options = Options 
-  { scenePath :: FilePath
-  , jsFiles   :: [String]
-  , pushPull  :: PushPull
+  { scenePath       :: FilePath
+  , jsFiles         :: [String]
+  , sceneComponents :: [String]
+  , pushPull        :: PushPull
   } deriving (Show)
 
 data PushPull = Push | Pull
@@ -32,6 +33,7 @@ defaultOptions :: FilePath -> Options
 defaultOptions f = Options
   { scenePath   = f
   , jsFiles     = []
+  , sceneComponents = []
   , pushPull    = Push
   } 
 
@@ -40,6 +42,9 @@ options =
   [ Option [] ["js"]
         (ReqArg (\ d opts -> opts { jsFiles = jsFiles opts ++ [d] }) "path-or-URL")
         "javascript to include"
+  , Option [] ["component"]
+        (ReqArg (\ d opts -> opts { sceneComponents = sceneComponents opts ++ [d] }) "component")
+        "scene components (fog | keyboard-shortcuts | stats  | ...)"
   , Option [] ["pull"]
         (NoArg (\ opts -> opts { pushPull = Pull }))
         "pull DOM changes into original aframe.html file"
