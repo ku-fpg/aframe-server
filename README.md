@@ -19,8 +19,8 @@ always be reloaded to get the lastest updates.
 COMMAND               | Push | Pull  | Notes
 ----------------------|------|-------|-----------------
 GET /                 |      | -      | Latest `AFrame` is injected into a *static* webpage
-GET /scene.html       | :white_check_mark: | | Scene is automatically updated
-GET /editable.html    | :white_check_mark: | :white_check_mark: | Scene changes are sent back into the server with auto updating
+GET /dynamic.html     | :white_check_mark: | | Scene is automatically updated
+GET /edit.html        | | :white_check_mark: | Scene changes are sent back into the server with auto updating
 
 ### Serving assets, JavaScript, etc.
 
