@@ -55,7 +55,7 @@ aframeServer scene port jssExtras aframe = do
                [ ("/",[])
                , ("/dynamic.html",
                     [ "https://code.jquery.com/jquery-2.2.3.min.js"
-                    , "/static/js/aframe-push.js"
+                    , "/static/js/aframe-server-utils.js"
                     ])
                , ("/edit.html",
                     [ "https://code.jquery.com/jquery-2.2.3.min.js"

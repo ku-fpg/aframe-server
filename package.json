@@ -1,0 +1,31 @@
+{
+  "name": "aframe-server-utils",
+  "version": "1.0.0",
+  "description": "Shared server-based space for A-Frame scenes.",
+  "private": true,
+  "main": "build/index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "browserify": "^12.0.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm run browserify -- --debug -o static/js/aframe-server-utils.js",
+    "browserify": "browserify js/aframe-server-utils.js -s 'aframe-server-utils'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ku-fpg/aframe-server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "BSD3",
+  "bugs": {
+    "url": "https://github.com/ku-fpg/aframe-server/issues"
+  },
+  "homepage": "https://github.com/ku-fpg/aframe-server"
+}
