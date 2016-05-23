@@ -28,6 +28,8 @@ import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import System.FilePath.Posix as P
 import Data.List as L
 
+import Paths_aframe_server
+
 data AFrameP :: * -> * where
   SetAFrame       :: AFrame -> AFrameP ()
   GetAFrame       ::           AFrameP AFrame  -- ^ Get the current and/or latest aframe
@@ -111,10 +113,20 @@ aframeServer scene port jssExtras aframe = do
       ]
 
     -- support the static files
+    sequence_
+      [ S.get (capture ("/static/js/" ++ f)) $ do
+          liftIO $ print f
+          f' <- liftIO $ getDataFileName $ "static/js/" ++ f
+          S.file $ f'
+      | f <- ["aframe-server-utils.js"]
+      ]
+
+    -- support the CLI files
     sequence_ 
       [ S.get (capture p) $ do
           S.file $ fileLocation
       | p@('/':fileLocation) <- L.nub $ concat $ map snd scenes
+      , not $ "/static/" `L.isPrefixOf` p
       ]
 
     S.get ("/scene") $ do
