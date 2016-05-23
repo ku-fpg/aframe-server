@@ -1,8 +1,10 @@
-{-# LANGUAGE KindSignatures, GADTs, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE KindSignatures, GADTs, LambdaCase, ScopedTypeVariables, TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Web.AFrame where
 
+import qualified Control.Natural as N
+import           Control.Natural(type (:~>))
 import qualified Control.Object as O
 import           Control.Object ((#))
 
@@ -19,6 +21,7 @@ import qualified Data.Text.Lazy as LT
 import qualified Data.Text as T
 import           Data.Aeson (ToJSON(..), object, (.=))
 import qualified Data.Aeson as A
+import           Control.Concurrent.STM
 import Data.Monoid ((<>))
 
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
@@ -26,17 +29,22 @@ import System.FilePath.Posix as P
 import Data.List as L
 
 data AFrameP :: * -> * where
-  SetAFrame       :: AFrame     -> AFrameP ()
-  GetAFrame       ::               AFrameP AFrame  -- ^ Get the current and/or latest aframe
-  GetAFrameStatus :: Int -> Int -> AFrameP Change  -- ^ version tag, and timeout time in ms
+  SetAFrame       :: AFrame -> AFrameP ()
+  GetAFrame       ::           AFrameP AFrame  -- ^ Get the current and/or latest aframe
+  GetAFrameStatus :: Int    -> AFrameP Change  -- ^ version tag, returns instructions to get the the latest version
 
 data Change = HEAD    -- already at latest, signals a timeout
             | RELOAD  -- change is complex; please reload entire model
+            | DELTAS  -- Small changes have been made; here they are
+                      -- Always include an update to the verison tag.
+                [(Path,Attribute)]
 
 instance ToJSON Change where
     -- this generates a Value
     toJSON HEAD   = object ["change" .= ("HEAD" :: String)]
     toJSON RELOAD = object ["change" .= ("RELOAD" :: String)]
+--    toJSON DELTAS = object ["change" .= ("RELOAD" :: String)]
+    
         
 -- This entry point generates a server that handles the AFrame.
 -- It never terminates, but can be started in a seperate thread.
@@ -44,22 +52,17 @@ instance ToJSON Change where
 -- The second argument is the port to be served from.
 -- The thrid argument is a list of URLs to serve up as 
 
-aframeServer :: String -> Int -> [String] -> O.Object AFrameP -> IO ()
+aframeServer :: String -> Int -> [String] -> (AFrameP :~> STM) -> IO ()
 aframeServer scene port jssExtras aframe = do
   let dir  = takeDirectory scene
       file = takeFileName scene
       jquery = "https://code.jquery.com/jquery-2.2.3.min.js"
-      push   = "/static/js/aframe-push.js"
       scenes :: [(String,[String])]
       scenes = map (\ (a,b) -> (a,b ++ jssExtras))
                [ ("/",[])
                , ("/dynamic.html",
                     [ "https://code.jquery.com/jquery-2.2.3.min.js"
                     , "/static/js/aframe-server-utils.js"
-                    ])
-               , ("/edit.html",
-                    [ "https://code.jquery.com/jquery-2.2.3.min.js"
-                    , "/static/js/aframe-pull.js"
                     ])
                ]
 
@@ -96,7 +99,7 @@ aframeServer scene port jssExtras aframe = do
           -- and if not, use a (static) wrapper.
           txt <- liftIO $ do
                 wrapper <- readFile scene
-                af      <- aframe # GetAFrame
+                af      <- atomically (aframe # GetAFrame)
                 return $ injectJS jss 0 $ injectAFrame af wrapper
           S.html $ LT.pack $ txt   
       | (s,jss) <- scenes
@@ -112,14 +115,21 @@ aframeServer scene port jssExtras aframe = do
     S.get ("/scene") $ do
           xRequest
           s <- liftIO $ do
-                  aframe # GetAFrame
+                  atomically (aframe # GetAFrame)
           S.html $ aframeToText $ s
 
     S.get ("/status/:version") $ do
           xRequest
           v :: Int <- param "version"
           s <- liftIO $ do
-                  aframe # GetAFrameStatus v 3000
+                  timer <- registerDelay (3 * 1000 * 1000)
+                  atomically $
+                        (aframe # GetAFrameStatus v) `orElse`
+                                do ping <- readTVar timer
+                                   if ping 
+                                   then return HEAD -- timeout
+                                   else retry       -- try again
+
           S.json $ s
 
     S.middleware $ staticPolicy (addBase dir)

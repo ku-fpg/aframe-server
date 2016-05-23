@@ -1,9 +1,11 @@
-{-# LANGUAGE KindSignatures, GADTs, LambdaCase, DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE KindSignatures, GADTs, LambdaCase, DeriveDataTypeable, ScopedTypeVariables, TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-cse #-}
 
 module Main where
 
+import qualified Control.Natural as N
+import           Control.Natural((:~>), nat)
 import qualified Control.Object as O
 import           Control.Object ((#))
 import           Control.Concurrent
@@ -89,18 +91,19 @@ main2 opts a = do
   print a
   putStrLn $ showAFrame a
 
-  let obj = O.Object $ \ case
-              GetAFrame -> atomically $ do
+  let obj :: AFrameP :~> STM
+      obj = nat $ \ case
+              GetAFrame -> do
                                   (fm,ix) <- readTVar var
                                   case Map.lookup ix fm of
                                     Nothing -> error "internal error"
                                     Just v -> return $ setAttribute "version" (fromString $ show ix) $ v
 
-              SetAFrame a -> atomically $ do
+              SetAFrame a -> do
                                   (fm,ix) <- readTVar var
                                   -- version tag always overwritten on SetAFrame
                                   writeTVar var $ modifyDB a (fm,ix)
-
+{-
               GetAFrameStatus p tm -> do
                             timer <- registerDelay (1000 * tm)
                             atomically $ do
@@ -111,14 +114,15 @@ main2 opts a = do
                                   else if ping 
                                        then return HEAD -- timeout
                                        else retry       -- try again
-
+-}
 
   forkIO $ fileReader fileName               (1000 * 1000) obj
   forkIO $ fileWriter (fileName ++ ".saved") (1000 * 1000) obj
-  
+  forkIO $ aframeDiff obj
+    
   aframeServer fileName 3947 (jsFiles opts) obj
 
-fileReader :: String -> Int -> O.Object AFrameP -> IO ()
+fileReader :: String -> Int -> (AFrameP :~> STM) -> IO ()
 fileReader fileName delay obj = loop ""
   where
      loop old = do
@@ -128,15 +132,15 @@ fileReader fileName delay obj = loop ""
         then loop new
         else case readAFrame new of
           Nothing -> loop old
-          Just a -> do obj # SetAFrame a
+          Just a -> do atomically (obj # SetAFrame a)
                        loop new
 
-fileWriter :: String -> Int -> O.Object AFrameP -> IO ()
+fileWriter :: String -> Int -> (AFrameP :~> STM) -> IO ()
 fileWriter fileName delay obj = loop ""
   where
      loop old = do
         threadDelay delay
-        aframe <- obj # GetAFrame
+        aframe <- atomically (obj # GetAFrame)
         case getAttribute "version" aframe of
           Just version | version == old -> loop version
                        | otherwise -> do
@@ -144,3 +148,20 @@ fileWriter fileName delay obj = loop ""
             -- the version number is sessions 
             writeFile fileName $ showAFrame $ resetAttribute "version" $ aframe
             loop version
+
+
+aframeDiff :: (AFrameP :~> STM) -> IO ()
+aframeDiff obj = do
+        aframe <- atomically (obj # GetAFrame)
+        loop aframe
+  where
+     loop old = do
+        threadDelay (1000 * 1000)
+        new <- atomically (obj # GetAFrame)
+        if old == new
+        then loop new
+        else do
+            let ds = deltaAFrame old new 
+            print ("diff",ds) -- Diff.compress ds)
+            loop new
+
