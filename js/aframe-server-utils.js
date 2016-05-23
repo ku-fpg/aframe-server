@@ -40,6 +40,18 @@ ServerUtils.prototype = {
 //    console.log("updateScene",d)
     if (d.change && d.change == "HEAD") {
       this.loadScene("HEAD");
+    } else if (d.change && d.change == "DELTAS") {
+      console.log("DELTAS",d)
+      d.changes.forEach(function(o) {
+        var q = o.path[0];
+        for (var i = 1;i < o.path.length;i+=2) {
+          q += " > " + o.path[i+1] + ":nth-of-type(" + (o.path[i]+1) + ")"
+        }
+        // This is where we do the micro-updates
+        $(q).attr(o.attr,o.value);
+        console.log(o,q);
+      });
+      this.loadScene("HEAD");  // try reload the scene
     } else {
       this.loadScene("RELOAD");
     }
