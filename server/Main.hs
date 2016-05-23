@@ -103,18 +103,19 @@ main2 opts a = do
                                   (fm,ix) <- readTVar var
                                   -- version tag always overwritten on SetAFrame
                                   writeTVar var $ modifyDB a (fm,ix)
-{-
-              GetAFrameStatus p tm -> do
-                            timer <- registerDelay (1000 * tm)
-                            atomically $ do
+              GetAFrameStatus p -> do
                                   (fm,ix) <- readTVar var
-                                  ping <- readTVar timer
                                   if ix /= p 
-                                  then return RELOAD
-                                  else if ping 
-                                       then return HEAD -- timeout
-                                       else retry       -- try again
--}
+                                  then case (Map.lookup p fm,Map.lookup ix fm) of
+                                         (Just old,Just new) ->
+                                            case deltaAFrame old new of
+                                              Just diffs -> return 
+                                                                $ DELTAS
+                                                                $ (Path "a-scene" [],("version",fromString $ show ix))
+                                                                : diffs
+                                              Nothing -> return RELOAD
+                                         _ -> return RELOAD
+                                  else retry       -- try again
 
   forkIO $ fileReader fileName               (1000 * 1000) obj
   forkIO $ fileWriter (fileName ++ ".saved") (1000 * 1000) obj

@@ -43,8 +43,13 @@ instance ToJSON Change where
     -- this generates a Value
     toJSON HEAD   = object ["change" .= ("HEAD" :: String)]
     toJSON RELOAD = object ["change" .= ("RELOAD" :: String)]
---    toJSON DELTAS = object ["change" .= ("RELOAD" :: String)]
-    
+    toJSON (DELTAS pas) 
+                  = object ["change" .= ("DELTAS" :: String)
+                           ,"changes" .= 
+                               [ object ["path" .= p, "attr" .= l, "value" .= v]
+                               | (p,(l,v)) <-  pas
+                               ]
+                           ]
         
 -- This entry point generates a server that handles the AFrame.
 -- It never terminates, but can be started in a seperate thread.
