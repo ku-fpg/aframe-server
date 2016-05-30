@@ -64,12 +64,14 @@ aframeServer scene port jssExtras aframe = do
   let dir  = takeDirectory scene
       file = takeFileName scene
       jquery = "https://code.jquery.com/jquery-2.2.3.min.js"
+      utils  = "aframe-server-utils.js"
       scenes :: [(String,[String])]
       scenes = map (\ (a,b) -> (a,b ++ jssExtras))
                [ ("/",[])
                , ("/dynamic.html",
                     [ "https://code.jquery.com/jquery-2.2.3.min.js"
-                    , "/static/js/aframe-server-utils.js"
+                    ] ++
+                    [ "/static/js/" ++ js | js <- [utils]
                     ])
                ]
 
@@ -108,17 +110,17 @@ aframeServer scene port jssExtras aframe = do
                 wrapper <- readFile scene
                 af      <- atomically (aframe # GetAFrame)
                 return $ injectJS jss 0 $ injectAFrame af wrapper
+--                return $ wrapper
           S.html $ LT.pack $ txt   
       | (s,jss) <- scenes
       ]
 
     -- support the static files
     sequence_
-      [ S.get (capture ("/static/js/" ++ f)) $ do
-          liftIO $ print f
-          f' <- liftIO $ getDataFileName $ "static/js/" ++ f
+      [ S.get (capture ("/static/js/" ++ js)) $ do
+          f' <- liftIO $ getDataFileName $ "static/js/" ++ js
           S.file $ f'
-      | f <- ["aframe-server-utils.js"]
+      | js <- [utils]
       ]
 
     -- support the CLI files
