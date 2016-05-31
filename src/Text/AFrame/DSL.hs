@@ -4,8 +4,24 @@ module Text.AFrame.DSL
   (  -- * Entity DSL
     DSL,
     scene,
-    aImage,
-    aEntity,
+    entity,
+    box,
+    camera,
+    collada_model,
+    cone,
+    cursor,
+    curvedimage,
+    cylinder,
+    image,
+    light,
+    obj_model,
+    plane,
+    ring,
+    sky,
+    sphere,
+    torus,
+    video,
+    videosphere,
     -- * Component DSL
     position,
     rotation,
@@ -15,8 +31,8 @@ module Text.AFrame.DSL
     List,
     -- * DSL classes
     ToProperty,
-    Entity,
-    entity,
+    PrimitiveEntity,
+    primitiveEntity,
     Component,
     component,
   ) where
@@ -36,11 +52,11 @@ class ToProperty c where
 class Component f where
   component :: ToProperty c => Label -> c -> f ()
 
-class Component f => Entity f where
-  entity :: Text -> f a -> f a
+class Component f => PrimitiveEntity f where
+  primitiveEntity :: Text -> f a -> f a
 
 ---------------------------------------------------------------------------------
--- Entity DSL
+-- Primitive DSL
 
 newtype DSL a = DSL { runDSL :: Int -> (a,Int,[Attribute],[AFrame]) }
 
@@ -57,9 +73,9 @@ instance Monad DSL where
      (r1,i1,as1,af1) -> case runDSL (k2 r1) i1 of
                         (r2,i2,as2,af2) -> (r2,i2,as1 ++ as2,af1 ++ af2)
 
-instance Entity DSL where
-  entity :: Text -> DSL a -> DSL a
-  entity nm m = DSL $ \ i0 -> case runDSL m i0 of
+instance PrimitiveEntity DSL where
+  primitiveEntity :: Text -> DSL a -> DSL a
+  primitiveEntity nm m = DSL $ \ i0 -> case runDSL m i0 of
      (r1,i1,as1,af1) -> (r1,i1,[],[AFrame (Primitive nm) as1 af1])
                     
 instance Component DSL where
@@ -68,11 +84,11 @@ instance Component DSL where
 
 
 scene :: DSL () -> AFrame
-scene m = case runDSL (entity "scene" m) 0 of
+scene m = case runDSL (primitiveEntity "scene" m) 0 of
              (_, _, [], [f]) -> f
-             (_, _, _,  [] ) -> error "scene internal error: no top-level primitive"
+             (_, _, _,  [] ) -> error "scene internal error: no top-level primitiveEntity"
              (_, _, _,  [_]) -> error "scene internal error: top-level attribute"
-             (_, _, _,  _  ) -> error "scene internal error: to many top-level primitives"
+             (_, _, _,  _  ) -> error "scene internal error: to many top-level primitiveEntitys"
 
 ---------------------------------------------------------------------------------
 -- Properties DSL
@@ -109,13 +125,62 @@ instance ToProperty (Double,Double,Double) where
    where show' a = showFFloat Nothing a ""
 
 ---------------------------------------------------------------------------------------------------------
--- Entities
+-- Primitives
 
-aImage :: DSL () -> DSL ()
-aImage = entity "a-image"
+entity :: DSL a -> DSL a
+entity = primitiveEntity "a-entity"
 
-aEntity :: DSL () -> DSL ()
-aEntity = entity "a-entity"
+box :: DSL a -> DSL a
+box = primitiveEntity "a-box"
+
+camera :: DSL a -> DSL a
+camera = primitiveEntity "a-camera"
+
+collada_model :: DSL a -> DSL a
+collada_model = primitiveEntity "a-collada-model"
+
+cone :: DSL a -> DSL a
+cone = primitiveEntity "a-cone"
+
+cursor :: DSL a -> DSL a
+cursor = primitiveEntity "a-cursor"
+
+curvedimage :: DSL a -> DSL a
+curvedimage = primitiveEntity "a-curvedimage"
+
+cylinder :: DSL a -> DSL a
+cylinder = primitiveEntity "a-cylinder"
+
+image :: DSL a -> DSL a
+image = primitiveEntity "a-image"
+
+light :: DSL a -> DSL a
+light = primitiveEntity "a-light"
+
+obj_model :: DSL a -> DSL a
+obj_model = primitiveEntity "a-obj-model"
+
+plane :: DSL a -> DSL a
+plane = primitiveEntity "a-plane"
+
+ring :: DSL a -> DSL a
+ring = primitiveEntity "a-ring"
+
+sky :: DSL a -> DSL a
+sky = primitiveEntity "a-sky"
+
+sphere :: DSL a -> DSL a
+sphere = primitiveEntity "a-sphere"
+
+torus :: DSL a -> DSL a
+torus = primitiveEntity "a-torus"
+
+video :: DSL a -> DSL a
+video = primitiveEntity "a-video"
+
+videosphere :: DSL a -> DSL a
+videosphere = primitiveEntity "a-videosphere"
+
 
 ---------------------------------------------------------------------------------------------------------
 -- Components
@@ -137,7 +202,9 @@ template = component "template"
 
 example3 :: AFrame
 example3 = scene $ do
-  aEntity $ do
+  entity $ do
     template $ src "#boxes"
     position (0,2,0)
     rotation (0,0,0)
+
+
