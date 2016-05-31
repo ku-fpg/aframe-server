@@ -32,8 +32,8 @@ import Paths_aframe_server
 
 data AFrameP :: * -> * where
   SetAFrame       :: AFrame -> AFrameP ()
-  GetAFrame       ::           AFrameP AFrame  -- ^ Get the current and/or latest aframe
-  GetAFrameStatus :: Int    -> AFrameP Change  -- ^ version tag, returns instructions to get the the latest version
+  GetAFrame       ::           AFrameP AFrame  --  Get the current and/or latest aframe
+  GetAFrameStatus :: Int    -> AFrameP Change  --  version tag, returns instructions to get the the latest version
 
 data Change = HEAD    -- already at latest, signals a timeout
             | RELOAD  -- change is complex; please reload entire model
