@@ -37,7 +37,7 @@ class Component f where
   component :: ToProperty c => Label -> c -> f ()
 
 class Component f => Entity f where
-  entity :: Text -> f () -> f ()
+  entity :: Text -> f a -> f a
 
 ---------------------------------------------------------------------------------
 -- Entity DSL
@@ -58,7 +58,7 @@ instance Monad DSL where
                         (r2,i2,as2,af2) -> (r2,i2,as1 ++ as2,af1 ++ af2)
 
 instance Entity DSL where
-  entity :: Text -> DSL () -> DSL ()
+  entity :: Text -> DSL a -> DSL a
   entity nm m = DSL $ \ i0 -> case runDSL m i0 of
      (r1,i1,as1,af1) -> (r1,i1,[],[AFrame (Primitive nm) as1 af1])
                     
