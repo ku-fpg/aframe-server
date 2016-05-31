@@ -4,12 +4,9 @@ module Text.AFrame.DSL
   (  -- * Entity DSL
     DSL,
     scene,
-    entity,
     aImage,
     aEntity,
     -- * Component DSL
-    Component,
-    component,
     position,
     rotation,
     src,
@@ -19,6 +16,9 @@ module Text.AFrame.DSL
     -- * DSL classes
     ToProperty,
     Entity,
+    entity,
+    Component,
+    component,
   ) where
 
 
@@ -141,22 +141,3 @@ example3 = scene $ do
     template $ src "#boxes"
     position (0,2,0)
     rotation (0,0,0)
-{-
-
-example :: AFrame 
-example = scene $ do
-  attr "Hello" "World"
-  prim "foo" $ do
-    attr "This" "That"
-
-
-example2 :: AFrame 
-example2 = scene $ do
-  attr "Hello" "World"
-  prim "foo" $ do
-    return ()
-    attr "This" "That!"
-    
-    
-
--}
