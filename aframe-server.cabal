@@ -20,11 +20,12 @@ data-files:
 
 library
   exposed-modules:     Web.AFrame
+                 ,     Text.AFrame
+                 ,     Text.AFrame.DSL
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.8 && <4.9
                ,       aeson == 0.11.*
-               ,       aframe == 0.1.*
                ,       bytestring
                ,       filepath == 1.4.*
                ,       natural-transformation == 0.3.1
@@ -36,6 +37,10 @@ library
                ,       wai-middleware-static == 0.8.0
                ,       stm == 2.4.* 
                ,       wai-extra == 3.0.*
+               ,       gdiff
+               ,       taggy
+               ,       containers
+               ,       unordered-containers
   other-modules:      Paths_aframe_server
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -43,7 +48,6 @@ library
 executable aframe-server
   main-is:  Main.hs
   build-depends:       base >=4.8 && <4.9
-               ,       aframe == 0.1.*
                ,       aframe-server == 0.1.0.0
                ,       containers == 0.5.*
                ,       stm == 2.4.* 
