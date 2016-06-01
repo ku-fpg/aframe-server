@@ -25,8 +25,13 @@ module Text.AFrame.DSL
     -- * Component DSL
     position,
     rotation,
-    src,
     template,
+    -- * Attribute DSL
+    color,
+    height,
+    radius,
+    src,
+    width,
     -- * Property builder sub-DSL
     List,
     -- * DSL classes
@@ -84,7 +89,7 @@ instance Component DSL where
 
 
 scene :: DSL () -> AFrame
-scene m = case runDSL (primitiveEntity "scene" m) 0 of
+scene m = case runDSL (primitiveEntity "a-scene" m) 0 of
              (_, _, [], [f]) -> f
              (_, _, _,  [] ) -> error "scene internal error: no top-level primitiveEntity"
              (_, _, _,  [_]) -> error "scene internal error: top-level attribute"
@@ -122,6 +127,10 @@ instance ToProperty Text where
 
 instance ToProperty (Double,Double,Double) where
   toProperty (a,b,c) = Property $ pack $ unwords $ map show' [a,b,c]
+   where show' a = showFFloat Nothing a ""
+
+instance ToProperty Double where
+  toProperty = Property . pack . show' 
    where show' a = showFFloat Nothing a ""
 
 ---------------------------------------------------------------------------------------------------------
@@ -191,11 +200,31 @@ position = component "position"
 rotation :: Component k => (Double,Double,Double) -> k ()
 rotation = component "rotation"
 
+template :: Component k => List Attribute () -> k ()
+template = component "template"
+
+wasd_controls :: Component k => List Attribute () -> k ()
+wasd_controls = component "wasd-controls"
+
+------------------------------------------------------
+-- Attributes
+
+-- TODO: perhaps have a seperate class for these (Attributes?)
+
+color :: Component k => Text -> k ()
+color = component "color"
+
+height :: Component k => Double -> k ()
+height = component "height"
+
+radius :: Component k => Double -> k ()
+radius = component "radius"
+
 src :: Component k => Text -> k ()
 src = component "src"
 
-template :: Component k => List Attribute () -> k ()
-template = component "template"
+width :: Component k => Double -> k ()
+width = component "width"
 
 ------------------------------------------------------
 -- Examples
