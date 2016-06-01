@@ -23,9 +23,12 @@ module Text.AFrame.DSL
     video,
     videosphere,
     -- * Component DSL
+    fog,
     position,
     rotation,
+    stats,
     template,
+    wasd_controls,
     -- * Attribute DSL
     color,
     height,
@@ -45,9 +48,10 @@ module Text.AFrame.DSL
 
 
 import Control.Monad
-import Data.Text(Text,unpack,pack)
-import Text.AFrame
+import Data.Text(Text,pack)
+import Data.String
 import Numeric
+import Text.AFrame
 
 ---------------------------------------------------------------------------------
 
@@ -57,7 +61,10 @@ class ToProperty c where
 class Component f where
   component :: ToProperty c => Label -> c -> f ()
 
-class Component f => PrimitiveEntity f where
+class Attributes f where
+  attribute :: ToProperty c => Label -> c -> f ()
+
+class (Attributes f, Component f) => PrimitiveEntity f where
   primitiveEntity :: Text -> f a -> f a
 
 ---------------------------------------------------------------------------------
@@ -87,6 +94,9 @@ instance Component DSL where
   component :: ToProperty c => Label -> c -> DSL ()
   component lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[])
 
+instance Attributes DSL where
+  attribute :: ToProperty c => Label -> c -> DSL ()
+  attribute lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[])
 
 scene :: DSL () -> AFrame
 scene m = case runDSL (primitiveEntity "a-scene" m) 0 of
@@ -116,8 +126,11 @@ instance Monad (List x) where
 instance ToProperty (List Attribute ()) where
   toProperty (List xs ()) = packProperty xs
 
-instance Component (List Attribute) where
-  component lab c = List [(lab,toProperty c)] ()
+instance Attributes (List Attribute) where
+  attribute lab c = List [(lab,toProperty c)] ()
+
+instance IsString (List Attribute ()) where
+  fromString str = List (unpackProperty $ Property  $ pack $ str) ()
 
 ---------------------------------------------------------------------------------------------------------
 -- ToProperty overloadings
@@ -127,11 +140,18 @@ instance ToProperty Text where
 
 instance ToProperty (Double,Double,Double) where
   toProperty (a,b,c) = Property $ pack $ unwords $ map show' [a,b,c]
-   where show' a = showFFloat Nothing a ""
+   where show' v = showFFloat Nothing v ""
 
 instance ToProperty Double where
   toProperty = Property . pack . show' 
-   where show' a = showFFloat Nothing a ""
+   where show' v = showFFloat Nothing v ""
+
+instance ToProperty () where
+  toProperty () = Property ""
+
+instance ToProperty Bool where
+  toProperty True  = Property "true"
+  toProperty False = Property "false"
 
 ---------------------------------------------------------------------------------------------------------
 -- Primitives
@@ -190,15 +210,20 @@ video = primitiveEntity "a-video"
 videosphere :: DSL a -> DSL a
 videosphere = primitiveEntity "a-videosphere"
 
-
 ---------------------------------------------------------------------------------------------------------
 -- Components
+
+fog :: Component k => List Attribute () -> k ()
+fog = component "fog"
 
 position :: Component k => (Double,Double,Double) -> k ()
 position = component "position"
 
 rotation :: Component k => (Double,Double,Double) -> k ()
 rotation = component "rotation"
+
+stats :: Component k => k ()
+stats = component "stats" ()
 
 template :: Component k => List Attribute () -> k ()
 template = component "template"
@@ -211,29 +236,18 @@ wasd_controls = component "wasd-controls"
 
 -- TODO: perhaps have a seperate class for these (Attributes?)
 
-color :: Component k => Text -> k ()
-color = component "color"
+color :: Attributes k => Text -> k ()
+color = attribute "color"
 
-height :: Component k => Double -> k ()
-height = component "height"
+height :: Attributes k => Double -> k ()
+height = attribute "height"
 
-radius :: Component k => Double -> k ()
-radius = component "radius"
+radius :: Attributes k => Double -> k ()
+radius = attribute "radius"
 
-src :: Component k => Text -> k ()
-src = component "src"
+src :: Attributes k => Text -> k ()
+src = attribute "src"
 
-width :: Component k => Double -> k ()
-width = component "width"
-
-------------------------------------------------------
--- Examples
-
-example3 :: AFrame
-example3 = scene $ do
-  entity $ do
-    template $ src "#boxes"
-    position (0,2,0)
-    rotation (0,0,0)
-
+width :: Attributes k => Double -> k ()
+width = attribute "width"
 
