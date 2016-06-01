@@ -43,12 +43,15 @@ module Text.AFrame.DSL
     primitiveEntity,
     Component,
     component,
+    -- * Pretty Printer for DSL
+    showAsDSL
   ) where
 
 
 
 import Control.Monad
-import Data.Text(Text,pack)
+import Data.Text(Text,unpack,pack)
+import qualified Data.Text as T
 import Data.String
 import Numeric
 import Text.AFrame
@@ -251,3 +254,34 @@ src = attribute "src"
 width :: Attributes k => Double -> k ()
 width = attribute "width"
 
+------------------------------------------------------
+-- Pretty Printer
+
+showAsDSL :: AFrame -> String
+showAsDSL (AFrame p0 as fs) = 
+    showPrimitiveAsDSL p0 ++ " $ do\n" ++
+    indent 2 (unlines (
+        map showAttributeAsDSL as ++
+        map showAsDSL fs))
+  where
+    showPrimitiveAsDSL :: Primitive -> String
+    showPrimitiveAsDSL (Primitive "a-scene") = "scene"
+    showPrimitiveAsDSL (Primitive p) | "a-" `T.isPrefixOf` p = drop 2 $ unpack p
+    showPrimitiveAsDSL (Primitive p) = unpack p
+
+    indent :: Int -> String -> String
+    indent n = unlines . map (take n (repeat ' ') ++) . lines
+
+    showAttributeAsDSL :: Attribute -> String
+    showAttributeAsDSL (Label l,Property p) 
+        | l `elem` ["width","height","radius"] = case () of
+              _ | "-" `T.isPrefixOf` p -> unpack l ++ " (" ++ unpack p ++ ")"
+              _                        -> unpack l ++ " " ++ unpack p
+        | l `elem` ["position","rotation"] = case words $ unpack p of
+            [a,b,c] -> unpack l ++ " (" ++ a ++ "," ++ b ++ "," ++ c ++ ")"
+            _ -> def
+        | l `elem` ["template"] = case unpackProperty (Property p) of
+              xs -> unpack l ++ " $ do\n" ++
+                      indent 2 (unlines (map showAttributeAsDSL xs))
+        | otherwise = def
+      where def = unpack l ++ " " ++ show (unpack p)
