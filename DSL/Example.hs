@@ -2,6 +2,7 @@ module Main where
 
 import Text.AFrame
 import Text.AFrame.DSL 
+import Web.AFrame.GHCi
 
 example :: AFrame
 example = scene $ do
@@ -10,7 +11,7 @@ example = scene $ do
     radius   1.25
     color    "#EF2D5E"
   box $ do
-    position (0,1.25,-1)
+    position (-1,0.5,1)
     rotation (0,45,0)
     width    1
     height   1
@@ -26,3 +27,4 @@ example = scene $ do
     height 4
     color "#7BC8A4"
   sky $ color "#ECECEC"
+--  entity $ template $ src "#x"

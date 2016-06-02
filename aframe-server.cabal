@@ -20,6 +20,7 @@ data-files:
 
 library
   exposed-modules:     Web.AFrame
+                 ,     Web.AFrame.GHCi
                  ,     Text.AFrame
                  ,     Text.AFrame.DSL
   -- other-modules:       

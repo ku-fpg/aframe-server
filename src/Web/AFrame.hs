@@ -1,17 +1,34 @@
 {-# LANGUAGE KindSignatures, GADTs, LambdaCase, ScopedTypeVariables, TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.AFrame where
+module Web.AFrame 
+  ( -- * The Update data-structure
+    AFrameP(..)  
+  , Change(..)
+    -- * Options
+  , Options(..)
+  , PushPull(..)
+  , defaultOptions
+    -- * The web server
+  , aframeStart
+    -- * Actors for the AFrameP object
+  , fileReader
+  , fileWriter
+  , aframeTrace
+  ) where
 
+import           Control.Concurrent
 import qualified Control.Natural as N
-import           Control.Natural(type (:~>))
+import           Control.Natural(type (:~>), nat)
 import qualified Control.Object as O
 import           Control.Object ((#))
+
+import           Data.String (fromString)
 
 import           Text.AFrame as AFrame
 
 --import Network.HTTP.Types
-import Web.Scotty as S
+import Web.Scotty as S hiding (Options)
 import Network.Wai.Middleware.Static
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
@@ -28,7 +45,30 @@ import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import System.FilePath.Posix as P
 import Data.List as L
 
+import qualified Data.Map.Strict as Map
+
+
 import Paths_aframe_server
+
+
+data Options = Options 
+  { scenePath       :: FilePath   -- The AFrame Text, embedded inside an HTML document.
+  , jsFiles         :: [String]   -- JS files to inject into theh HTML
+  , sceneComponents :: [String]   -- components to inject into the \<a-scene>
+  , pushPull        :: PushPull   -- where do changes go?
+  } deriving (Show)
+
+data PushPull = Push | Pull
+ deriving Show
+ 
+defaultOptions :: FilePath -> Options
+defaultOptions f = Options
+  { scenePath       = f
+  , jsFiles         = []
+  , sceneComponents = []
+  , pushPull        = Push
+  } 
+
 
 data AFrameP :: * -> * where
   SetAFrame       :: AFrame -> AFrameP ()
@@ -53,6 +93,63 @@ instance ToJSON Change where
                                ]
                            ]
         
+
+
+-- | create a web server, and our AFrameP object, returning the AFrameP object.
+aframeStart :: Options -> AFrame -> IO (AFrameP :~> STM)
+aframeStart opts a = do
+  let fileName = scenePath opts
+
+  let modifyDB new (fm,ix) =
+       case Map.lookup ix fm of
+        Nothing -> error "internal error"
+        Just a | new == a  -> (fm,ix)   -- ignore
+               | otherwise -> let ix' = succ ix
+                              in (Map.insert ix' new fm,ix')
+
+  -- The DB is a tuple of (map from # to AFrame, and the current #)
+  -- GET gets the current # via lookup
+  -- SET sets a *new/unique* #, if there are changes
+  --   - It is not possible to SET a version without making a change first;
+  --   - A dup update is the identity.
+  -- The version tag is never in the underlying AFrame, but added
+  -- when GET-ing the AFrame, and removed/ignored when SET-ing.
+  -- The act of SET-ing is *asking* for a new version number to be assigned.
+  var :: TVar (Map.Map Int AFrame, Int) <- newTVarIO $ (Map.singleton 0 a, 0)
+
+  print a
+  putStrLn $ showAFrame a
+
+  let obj :: AFrameP :~> STM
+      obj = nat $ \ case
+              GetAFrame -> do
+                                  (fm,ix) <- readTVar var
+                                  case Map.lookup ix fm of
+                                    Nothing -> error "internal error"
+                                    Just v -> return $ setAttribute "version" (fromString $ show ix) $ v
+
+              SetAFrame a -> do
+                                  (fm,ix) <- readTVar var
+                                  -- version tag always overwritten on SetAFrame
+                                  writeTVar var $ modifyDB a (fm,ix)
+              GetAFrameStatus p -> do
+                                  (fm,ix) <- readTVar var
+                                  if ix /= p 
+                                  then case (Map.lookup p fm,Map.lookup ix fm) of
+                                         (Just old,Just new) ->
+                                            case deltaAFrame old new of
+                                              Just diffs -> return 
+                                                                $ DELTAS
+                                                                $ (Path "a-scene" [],("version",fromString $ show ix))
+                                                                : diffs
+                                              Nothing -> return RELOAD
+                                         _ -> return RELOAD
+                                  else retry       -- try again
+
+  forkIO $ aframeServer fileName 3947 (jsFiles opts) obj
+  
+  return obj
+
 -- This entry point generates a server that handles the AFrame.
 -- It never terminates, but can be started in a seperate thread.
 -- The first argument is the name of the file to be server.
@@ -99,7 +196,7 @@ aframeServer scene port jssExtras aframe = do
       aframeToText = LT.pack . showAFrame
 
   S.scotty port $ do
-    S.middleware $ logStdoutDev
+--    S.middleware $ logStdoutDev
 
     sequence_ 
       [ S.get (capture s) $ do
@@ -154,3 +251,46 @@ aframeServer scene port jssExtras aframe = do
     S.middleware $ staticPolicy (addBase dir)
 
   return ()
+
+fileReader :: String -> Int -> (AFrameP :~> STM) -> IO ()
+fileReader fileName delay obj = loop ""
+  where
+     loop old = do
+        threadDelay delay
+        new <- readFile fileName
+        if new == old
+        then loop new
+        else case readAFrame new of
+          Nothing -> loop old
+          Just a -> do atomically (obj # SetAFrame a)
+                       loop new
+
+fileWriter :: String -> Int -> (AFrameP :~> STM) -> IO ()
+fileWriter fileName delay obj = loop ""
+  where
+     loop old = do
+        threadDelay delay
+        aframe <- atomically (obj # GetAFrame)
+        case getAttribute "version" aframe of
+          Just version | version == old -> loop version
+                       | otherwise -> do
+            -- we do not include the version number in what we save
+            -- the version number is sessions 
+            writeFile fileName $ showAFrame $ resetAttribute "version" $ aframe
+            loop version
+
+
+aframeTrace :: (AFrameP :~> STM) -> IO ()
+aframeTrace obj = do
+        aframe <- atomically (obj # GetAFrame)
+        loop aframe
+  where
+     loop old = do
+        threadDelay (1000 * 1000)
+        new <- atomically (obj # GetAFrame)
+        if old == new
+        then loop new
+        else do
+            let ds = deltaAFrame old new 
+            print ("diff",ds) -- Diff.compress ds)
+            loop new
