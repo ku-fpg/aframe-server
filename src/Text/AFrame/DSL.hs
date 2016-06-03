@@ -1,9 +1,10 @@
-{-# LANGUAGE GADTs, OverloadedStrings, KindSignatures, DataKinds, FlexibleInstances, InstanceSigs #-}
+{-# LANGUAGE GADTs, OverloadedStrings, KindSignatures, DataKinds, FlexibleInstances, InstanceSigs, RankNTypes #-}
 -- | Small monadic DSL for AFrame generation.
 module Text.AFrame.DSL 
   (  -- * Entity DSL
     DSL,
     scene,
+    animation,
     entity,
     box,
     camera,
@@ -30,21 +31,39 @@ module Text.AFrame.DSL
     template,
     wasd_controls,
     -- * Attribute DSL
+    attribute,
+    attribute_,
+    begin,
     color,
+    direction,
+    dur,
+    easing,
+    fill,
+    from,
     height,
     radius,
+    repeat_,
     src,
+    to,
     width,
+    -- * DSL Macros
+    fromTo,
     -- * Property builder sub-DSL
     List,
+    Single,
     -- * DSL classes
     ToProperty,
+    toProperty,
     PrimitiveEntity,
     primitiveEntity,
     Component,
     component,
     -- * Pretty Printer for DSL
-    showAsDSL
+    showAsDSL,
+    -- * Others
+    Attribute,
+    Property,
+    Label
   ) where
 
 
@@ -136,10 +155,25 @@ instance IsString (List Attribute ()) where
   fromString str = List (unpackProperty $ Property  $ pack $ str) ()
 
 ---------------------------------------------------------------------------------------------------------
+-- Single DSL, with no monadic support (by design)
+
+data Single x a where
+  Single :: x -> Single x ()
+
+instance Attributes (Single Attribute) where
+  attribute lab c = Single (lab,toProperty c)
+
+instance Component (Single Attribute) where
+  component lab c = Single (lab,toProperty c)
+
+---------------------------------------------------------------------------------------------------------
 -- ToProperty overloadings
 
 instance ToProperty Text where
   toProperty = Property
+
+instance ToProperty Property where
+  toProperty = id
 
 instance ToProperty (Double,Double,Double) where
   toProperty (a,b,c) = Property $ pack $ unwords $ map show' [a,b,c]
@@ -148,6 +182,9 @@ instance ToProperty (Double,Double,Double) where
 instance ToProperty Double where
   toProperty = Property . pack . show' 
    where show' v = showFFloat Nothing v ""
+
+instance ToProperty Int where
+  toProperty = Property . pack . show
 
 instance ToProperty () where
   toProperty () = Property ""
@@ -161,6 +198,9 @@ instance ToProperty Bool where
 
 entity :: DSL a -> DSL a
 entity = primitiveEntity "a-entity"
+
+animation :: DSL a -> DSL a
+animation = primitiveEntity "a-animation"
 
 box :: DSL a -> DSL a
 box = primitiveEntity "a-box"
@@ -237,10 +277,32 @@ wasd_controls = component "wasd-controls"
 ------------------------------------------------------
 -- Attributes
 
--- TODO: perhaps have a seperate class for these (Attributes?)
+attribute_ :: Attributes k => Text -> k ()
+attribute_ = attribute "attribute"
+
+begin :: Attributes k => Int -> k ()
+begin = attribute "begin"
 
 color :: Attributes k => Text -> k ()
 color = attribute "color"
+
+direction :: Attributes k => Text -> k ()
+direction = attribute "direction"
+
+dur :: Attributes k => Int -> k ()
+dur = attribute "dur"
+
+easing :: Attributes k => Text -> k ()
+easing = attribute "easing"
+
+fill :: Attributes k => Text -> k ()
+fill = attribute "fill"
+
+from :: Attributes k => Text -> k ()
+from = attribute "from"
+
+repeat_ :: Attributes k => Text -> k ()
+repeat_ = attribute "repeat"
 
 height :: Attributes k => Double -> k ()
 height = attribute "height"
@@ -250,6 +312,9 @@ radius = attribute "radius"
 
 src :: Attributes k => Text -> k ()
 src = attribute "src"
+
+to :: Attributes k => Text -> k ()
+to = attribute "to"
 
 width :: Attributes k => Double -> k ()
 width = attribute "width"
@@ -285,3 +350,23 @@ showAsDSL (AFrame p0 as fs) =
                       indent 2 (unlines (map showAttributeAsDSL xs))
         | otherwise = def
       where def = unpack l ++ " " ++ show (unpack p)
+
+
+------------------------------------------------------
+-- Macros
+
+-- | 'fromTo' simplifies the animations, by allowing the specification
+--   of 'attribute' 'from' and 'to' in a single line.
+--
+--  Example: toFrom position (1,2,3) (4,5,6) 
+--
+
+fromTo :: (Monad k, Attributes k, ToProperty c) => (c -> Single Attribute ()) -> c -> c -> k ()
+fromTo f x y | lbl1 == lbl2 = do attribute "attribute" lbl1
+                                 attribute "from"      a1
+                                 attribute "to"        a2
+             | otherwise = error "toFrom - the attribute builder was inconsistent"
+  where
+    Single (Label lbl1,Property a1) = f x
+    Single (Label lbl2,Property a2) = f y
+

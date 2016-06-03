@@ -1,10 +1,11 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, KindSignatures, GADTs, InstanceSigs, TypeOperators, MultiParamTypeClasses, FlexibleInstances, OverloadedStrings #-}
+{-# LANGUAGE TupleSections, GeneralizedNewtypeDeriving, RankNTypes, TypeFamilies, ScopedTypeVariables, KindSignatures, GADTs, InstanceSigs, TypeOperators, MultiParamTypeClasses, FlexibleInstances, OverloadedStrings #-}
 
 module Text.AFrame where
 
 import Control.Applicative
+import Control.Lens
+
 import Data.Char (isSpace)
-import Data.Generic.Diff
 import Data.Map(Map)
 import Data.String
 import Data.Text(Text,pack,unpack)
@@ -13,7 +14,6 @@ import qualified Data.Text.Lazy as LT
 import Data.Maybe (listToMaybe)
 import Data.List as L
 import Data.Monoid ((<>))
---import Text.XML.Light as X
 import Data.Aeson
 import Data.Monoid
 import qualified Text.Taggy as T
@@ -45,6 +45,8 @@ type Attribute = (Label,Property)
 -- | A valid css or jquerty-style path, in Haskell from.
 --   An example of the string form might be
 --     $('a-scene > a-entity:nth-of-type(2) > a-collada-model:nth-of-type(1) > a-animation:nth-of-type(1)')
+--  
+--  Note that the number offset of 1-based (1 is the first)
 data Path = Path Primitive [(Int,Primitive)]
   deriving (Show, Eq, Ord)
 
@@ -86,12 +88,6 @@ resetAttribute lbl (AFrame p as af) = AFrame p [ (l,p) | (l,p) <- as, l /= lbl ]
 --setPath :: Path -> Label -> Property -> AFrame -> AFrame
 
 --getPath :: Path -> Label -> AFrame -> Mabe Property
-
-getElementById :: AFrame -> Text -> Maybe AFrame
-getElementById af@(AFrame p as is) i = 
-    case lookup "id" as of
-      Just (Property i') | i == i' -> return af
-      _ -> listToMaybe [ af' | Just af' <- map (flip getElementById i) is ]
 
 -------------------------------------------------------------------------------------------------
 
@@ -169,80 +165,6 @@ injectAFrame aframe str = findScene str 0
     remainingScene (x:xs) = remainingScene xs
     remainingScene []     = []  
   
-------
--- Adding gdiff support
-------
-
-data AFrameFamily :: * -> * -> * where
- AFrame'     ::              AFrameFamily AFrame      (Cons Primitive 
-                                                      (Cons [Attribute] 
-                                                      (Cons [AFrame] Nil)))
- ConsAttr'   ::              AFrameFamily [Attribute] (Cons Attribute (Cons [Attribute] Nil))
- NilAttr'    ::              AFrameFamily [Attribute] Nil
- ConsAFrame' ::              AFrameFamily [AFrame] (Cons AFrame (Cons [AFrame] Nil))
- NilAFrame'  ::              AFrameFamily [AFrame] Nil
- Primitive'  :: Primitive -> AFrameFamily Primitive Nil
- Attribute'  :: Attribute -> AFrameFamily Attribute Nil
-
-instance Family AFrameFamily where
-  decEq  :: AFrameFamily tx txs -> AFrameFamily ty tys -> Maybe (tx :~: ty, txs :~: tys)
-  decEq AFrame'     AFrame'     = Just (Refl, Refl)
-  decEq ConsAttr'   ConsAttr'   = Just (Refl, Refl)
-  decEq NilAttr'    NilAttr'    = Just (Refl, Refl)
-  decEq ConsAFrame' ConsAFrame' = Just (Refl, Refl)
-  decEq NilAFrame'  NilAFrame'  = Just (Refl, Refl)
-
-  decEq (Primitive' p1) (Primitive' p2) | p1 == p2 = Just (Refl, Refl)
-  decEq (Attribute' a1) (Attribute' a2) | a1 == a2 = Just (Refl, Refl)
-  decEq _           _           = Nothing
-
-  fields :: AFrameFamily t ts -> t -> Maybe ts
-  fields AFrame'        (AFrame prim attrs fs) 
-                           = Just $ CCons prim $ CCons attrs $ CCons fs $ CNil
-  fields ConsAttr'      ((lbl,prop):xs) 
-                           = Just $ CCons (lbl,prop) $ CCons xs $ CNil
-  fields NilAttr'       [] = Just CNil
-  fields ConsAFrame'    (x:xs) 
-                           = Just $ CCons x $ CCons xs $ CNil
-  fields NilAFrame'     [] = Just CNil
-  fields (Primitive' _) _  = Just CNil
-  fields (Attribute' _) _  = Just CNil
-  fields _              _  = Nothing
-
-  apply  :: AFrameFamily t ts -> ts -> t
-  apply AFrame'         (CCons prim (CCons attrs (CCons fs CNil)))
-                             = AFrame prim attrs fs
-  apply ConsAttr'       (CCons (lbl,prop) (CCons xs CNil)) = (lbl,prop) : xs
-  apply NilAttr'        CNil = []
-  apply ConsAFrame'     (CCons x (CCons xs CNil)) = x : xs
-  apply NilAFrame'      CNil = []
-  apply (Primitive' p1) CNil = p1
-  apply (Attribute' a1) CNil = a1
-
-  string :: AFrameFamily t ts -> String
-  string AFrame'         = "AFrame"
-  string ConsAttr'       = "ConsAttr"
-  string NilAttr'        = "NilAttr"
-  string ConsAFrame'     = "ConsAFrame"
-  string NilAFrame'      = "NilAFrame"
-  string (Primitive' l1) = show l1
-  string (Attribute' p1) = show p1
-
-
-instance Type AFrameFamily AFrame where
-    constructors = [Concr AFrame']
-
-instance Type AFrameFamily Primitive where
-    constructors = [Abstr Primitive']
-    
-instance Type AFrameFamily [Attribute] where
-    constructors = [Concr ConsAttr',Concr NilAttr']    
-
-instance Type AFrameFamily [AFrame] where
-    constructors = [Concr ConsAFrame',Concr NilAFrame']
- 
-instance Type AFrameFamily Attribute where
-    constructors = [Abstr Attribute']
 
 data AFrameUpdate = AFrameUpdate 
     { aframePath     :: Path
@@ -318,6 +240,7 @@ resolveScript rf  = preOrderFrame fn
                          )
                          aframes
     fn af = return af
+{-
 instantiateTemplates :: Monad m => ([Attribute] -> AFrame -> m AFrame) -> AFrame -> m AFrame
 instantiateTemplates f root = preOrderFrame fn root
   where
@@ -332,3 +255,56 @@ instantiateTemplates f root = preOrderFrame fn root
                     return aEntity
                 _ -> return aEntity  -- id not found
     fn af = return af
+-}
+
+------------------------------------------------------
+-- Lenses support
+
+
+primitive  :: Lens' AFrame Primitive
+primitive = lens (\ (AFrame p _ _) -> p) (\ (AFrame _ as fs) p -> AFrame p as fs)
+
+attributes :: Lens' AFrame [Attribute]
+attributes = lens (\ (AFrame _ as _) -> as) (\ (AFrame p _ fs) as -> AFrame p as fs)
+
+innerAFrame :: Lens' AFrame [AFrame]
+innerAFrame = lens (\ (AFrame _ _ fs) -> fs) (\ (AFrame p as _) fs -> AFrame p as fs)
+
+type instance Index AFrame = Text -- lookup via the id tag
+
+type instance IxValue AFrame = AFrame
+
+instance Ixed AFrame where
+  ix :: Index AFrame -> Traversal' AFrame (IxValue AFrame)
+  ix i f af@(AFrame p as is) = 
+    case lookup "id" as of
+      Just (Property i') | i == i' -> f af
+      _ -> AFrame p as <$> traverse (ix i f) is
+      
+--      listToMaybe [ af' | Just af' <- map (flip getElementById i) is ]
+
+
+--  ix () f (Just a) = Just <$> f a
+--  ix () _ Nothing  = pure Nothing
+
+elementById :: Text -> Traversal' AFrame AFrame
+elementById = ix
+
+attributeByName :: Label -> Traversal' AFrame Property
+attributeByName lbl f af@(AFrame p as is) =
+    AFrame <$> pure p
+           <*> traverse (\ (lbl',prop') -> if lbl == lbl'
+                                           then (lbl',) <$> f prop'
+                                           else pure (lbl',prop')) as
+           <*> pure is
+
+{-
+           -- mirrors nth-of-type css selector. 1-based indexing.
+nthOfType :: Primitive -> Int -> Traversal' AFrame AFrame
+nthOfType prim i f af@(AFrame p as is) =
+    AFrame <$> pure p
+           <*> pure as
+           <*> traverse (\ (a',i') -> if i' == i
+                                      then (lbl',) <$> f prop'
+                                      else pure (lbl',prop')) (as `zip` [1..])
+-}

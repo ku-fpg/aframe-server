@@ -3,10 +3,9 @@
 
 module Web.AFrame.GHCi
   ( start
-  , set
+  , r, u, q, (?)
   , Options(..)
   , defaultOptions
-  , PushPull(..)
   ) where
 
 import           Control.Concurrent
@@ -15,6 +14,8 @@ import           Control.Natural(type (:~>), nat)
 import qualified Control.Object as O
 import           Control.Object ((#))
 
+import           Data.Functor.Identity
+import           Data.Monoid
 import           Data.String (fromString)
 
 import           Text.AFrame as AFrame
@@ -30,10 +31,25 @@ aframeScene :: MVar (AFrameP :~> STM)
 aframeScene = unsafePerformIO newEmptyMVar
 
 start :: Options -> IO ()
-start o = do obj <- aframeStart (defaultOptions "examples/demo.html") $ scene $ return () 
+start o = do obj <- aframeStart defaultOptions $ scene $ return () 
              putMVar aframeScene obj
 
-set :: AFrame -> IO ()
-set af = do
+
+r :: AFrame -> IO ()
+r = u . const . return 
+
+u :: (AFrame -> Identity AFrame) -> IO ()
+u f = do
   obj <- readMVar aframeScene
-  atomically (obj # SetAFrame af)
+  atomically $ do 
+    af <- obj # GetAFrame
+    obj # SetAFrame (runIdentity $ f af)
+
+q :: IO AFrame 
+q = do
+  obj <- readMVar aframeScene
+  atomically $ do
+    obj # GetAFrame
+
+(?) :: IO a -> (a -> First b) -> IO (Maybe b)
+m ? lens = m >>= return . getFirst . lens

@@ -7,7 +7,6 @@ module Web.AFrame
   , Change(..)
     -- * Options
   , Options(..)
-  , PushPull(..)
   , defaultOptions
     -- * The web server
   , aframeStart
@@ -33,7 +32,6 @@ import Network.Wai.Middleware.Static
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
 import           Control.Monad.IO.Class (liftIO)
-import Text.XML.Light as XML
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text as T
 import           Data.Aeson (ToJSON(..), object, (.=))
@@ -52,21 +50,16 @@ import Paths_aframe_server
 
 
 data Options = Options 
-  { scenePath       :: FilePath   -- The AFrame Text, embedded inside an HTML document.
+  { scenePath       :: Maybe FilePath   -- The AFrame Text, embedded inside an HTML document. (or default static file)
   , jsFiles         :: [String]   -- JS files to inject into theh HTML
   , sceneComponents :: [String]   -- components to inject into the \<a-scene>
-  , pushPull        :: PushPull   -- where do changes go?
   } deriving (Show)
-
-data PushPull = Push | Pull
- deriving Show
  
-defaultOptions :: FilePath -> Options
-defaultOptions f = Options
-  { scenePath       = f
+defaultOptions :: Options
+defaultOptions = Options
+  { scenePath       = Nothing
   , jsFiles         = []
   , sceneComponents = []
-  , pushPull        = Push
   } 
 
 
@@ -156,11 +149,15 @@ aframeStart opts a = do
 -- The second argument is the port to be served from.
 -- The thrid argument is a list of URLs to serve up as 
 
-aframeServer :: String -> Int -> [String] -> (AFrameP :~> STM) -> IO ()
-aframeServer scene port jssExtras aframe = do
-  let dir  = takeDirectory scene
-      file = takeFileName scene
-      jquery = "https://code.jquery.com/jquery-2.2.3.min.js"
+aframeServer :: Maybe String -> Int -> [String] -> (AFrameP :~> STM) -> IO ()
+aframeServer optScene port jssExtras aframe = do
+  let dir  = case optScene of
+               Just s -> takeDirectory s
+               Nothing    -> "."
+  scene <- case optScene of
+               Just s  -> return s
+               Nothing -> getDataFileName "static/index.html"
+  let jquery = "https://code.jquery.com/jquery-2.2.3.min.js"
       utils  = "aframe-server-utils.js"
       scenes :: [(String,[String])]
       scenes = map (\ (a,b) -> (a,b ++ jssExtras))
