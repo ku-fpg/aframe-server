@@ -286,16 +286,40 @@ attributeByName lbl f af@(AFrame p as is) =
                                            else pure (lbl',prop')) as
            <*> pure is
 
-{-
-           -- mirrors nth-of-type css selector. 1-based indexing.
+-- mirrors nth-of-type css selector. 1-based indexing.
 nthOfType :: Primitive -> Int -> Traversal' AFrame AFrame
-nthOfType prim i f af@(AFrame p as is) =
+nthOfType prim i f af@(AFrame p as fs) =
     AFrame <$> pure p
            <*> pure as
-           <*> traverse (\ (a',i') -> if i' == i
-                                      then (lbl',) <$> f prop'
-                                      else pure (lbl',prop')) (as `zip` [1..])
--}---------------------------------------------------------------------------------------------------------
+           <*> traverse (\ (a',(p',i')) -> 
+                              if i' == i && prim == p'
+                              then f a'
+                              else pure a') (zip fs $ nthOf $ map (\ (AFrame p _ _) -> p) $ fs)
+
+-- Utility to find the index of the specific element. 1-based indexing.
+-- >>> nthOf ['a','b','b','a']
+--     [('a',1),('b',1),('b',2),('a',2)]
+--
+nthOf :: Ord a => [a] -> [(a,Int)]
+nthOf xs = f xs []
+ where
+   f []     ys = reverse ys
+   f (x:xs) ys = f xs ((x,n) : ys)
+       where n = case lookup x ys of
+                  Nothing -> 1
+                  Just n' -> n' + 1
+
+-- This should be in the lens library
+get :: Traversal' s c -> s -> c
+get fld = (^. singular fld)
+
+triple :: Lens' Property (Double,Double,Double)
+triple = lens (\ (Property xs) -> case words $ unpack xs of
+                         [a,b,c] -> (read a,read b,read c)
+                         _       -> error "triple failure")
+              (\ a p -> toProperty p)
+
+---------------------------------------------------------------------------------------------------------
 -- ToProperty overloadings
 
 class ToProperty c where

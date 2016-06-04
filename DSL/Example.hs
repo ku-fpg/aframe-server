@@ -42,3 +42,11 @@ example = scene $ do
     color "#7BC8A4"
   sky $ color "#ECECEC"
 --  entity $ template $ src "#x"
+
+{-
+ >>> start
+ >>> s example
+ >>> u (elementById "animation-1"  . attributeByName "dur) "300"
+ >>> g (^. singular (elementById "animation-1"  . attributeByName "dur"))
+  -}
+
