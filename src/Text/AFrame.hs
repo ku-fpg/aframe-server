@@ -3,7 +3,7 @@
 module Text.AFrame where
 
 import Control.Applicative
-import Control.Lens
+import Lens.Micro
 
 import Data.Char (isSpace)
 import Data.Map(Map)
@@ -270,25 +270,13 @@ attributes = lens (\ (AFrame _ as _) -> as) (\ (AFrame p _ fs) as -> AFrame p as
 innerAFrame :: Lens' AFrame [AFrame]
 innerAFrame = lens (\ (AFrame _ _ fs) -> fs) (\ (AFrame p as _) fs -> AFrame p as fs)
 
-type instance Index AFrame = Text -- lookup via the id tag
-
-type instance IxValue AFrame = AFrame
-
-instance Ixed AFrame where
-  ix :: Index AFrame -> Traversal' AFrame (IxValue AFrame)
-  ix i f af@(AFrame p as is) = 
-    case lookup "id" as of
-      Just (Property i') | i == i' -> f af
-      _ -> AFrame p as <$> traverse (ix i f) is
-      
---      listToMaybe [ af' | Just af' <- map (flip getElementById i) is ]
-
-
---  ix () f (Just a) = Just <$> f a
---  ix () _ Nothing  = pure Nothing
 
 elementById :: Text -> Traversal' AFrame AFrame
-elementById = ix
+elementById i f af@(AFrame p as is) = 
+    case lookup "id" as of
+      Just (Property i') | i == i' -> f af
+      _ -> AFrame p as <$> traverse (elementById i f) is
+
 
 attributeByName :: Label -> Traversal' AFrame Property
 attributeByName lbl f af@(AFrame p as is) =

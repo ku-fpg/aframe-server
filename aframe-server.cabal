@@ -41,7 +41,7 @@ library
                ,       taggy
                ,       containers
                ,       unordered-containers
-               ,       lens == 4.14
+               ,       microlens == 0.4.4.0
   other-modules:      Paths_aframe_server
   GHC-options: -Wall -threaded
   hs-source-dirs:      src

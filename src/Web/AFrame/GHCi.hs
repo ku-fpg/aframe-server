@@ -3,7 +3,7 @@
 
 module Web.AFrame.GHCi
   ( start
-  , r, u, q, (?)
+  , s, u, g
   , Options(..)
   , defaultOptions
   ) where
@@ -35,21 +35,19 @@ start o = do obj <- aframeStart defaultOptions $ scene $ return ()
              putMVar aframeScene obj
 
 
-r :: AFrame -> IO ()
-r = u . const . return 
+s :: AFrame -> IO ()
+s = u . const  
 
-u :: (AFrame -> Identity AFrame) -> IO ()
+u :: (AFrame -> AFrame) -> IO ()
 u f = do
   obj <- readMVar aframeScene
   atomically $ do 
     af <- obj # GetAFrame
-    obj # SetAFrame (runIdentity $ f af)
+    obj # SetAFrame (f af)
 
-q :: IO AFrame 
-q = do
+g :: (AFrame -> a) -> IO a
+g f = do
   obj <- readMVar aframeScene
-  atomically $ do
+  r <- atomically $ do
     obj # GetAFrame
-
-(?) :: IO a -> (a -> First b) -> IO (Maybe b)
-m ? lens = m >>= return . getFirst . lens
+  return $ f r

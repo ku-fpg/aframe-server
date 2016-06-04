@@ -6,7 +6,7 @@ import Data.Text (Text)
 import Text.AFrame
 import Text.AFrame.DSL 
 import Web.AFrame.GHCi
-import Control.Lens
+import Lens.Micro
 
 example :: AFrame
 example = scene $ do
