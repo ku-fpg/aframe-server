@@ -77,9 +77,6 @@ import Text.AFrame
 
 ---------------------------------------------------------------------------------
 
-class ToProperty c where
-  toProperty :: c -> Property
-
 class Component f where
   component :: ToProperty c => Label -> c -> f ()
 
@@ -166,32 +163,6 @@ instance Attributes (Single Attribute) where
 instance Component (Single Attribute) where
   component lab c = Single (lab,toProperty c)
 
----------------------------------------------------------------------------------------------------------
--- ToProperty overloadings
-
-instance ToProperty Text where
-  toProperty = Property
-
-instance ToProperty Property where
-  toProperty = id
-
-instance ToProperty (Double,Double,Double) where
-  toProperty (a,b,c) = Property $ pack $ unwords $ map show' [a,b,c]
-   where show' v = showFFloat Nothing v ""
-
-instance ToProperty Double where
-  toProperty = Property . pack . show' 
-   where show' v = showFFloat Nothing v ""
-
-instance ToProperty Int where
-  toProperty = Property . pack . show
-
-instance ToProperty () where
-  toProperty () = Property ""
-
-instance ToProperty Bool where
-  toProperty True  = Property "true"
-  toProperty False = Property "false"
 
 ---------------------------------------------------------------------------------------------------------
 -- Primitives

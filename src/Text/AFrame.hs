@@ -18,7 +18,7 @@ import Data.Aeson
 import Data.Monoid
 import qualified Text.Taggy as T
 import qualified Data.HashMap.Strict as H
-
+import Numeric
 
 -- | 'AFrame' describes the contents of an a-frame scene,
 --   and is stored as a classical rose tree.
@@ -295,4 +295,32 @@ nthOfType prim i f af@(AFrame p as is) =
            <*> traverse (\ (a',i') -> if i' == i
                                       then (lbl',) <$> f prop'
                                       else pure (lbl',prop')) (as `zip` [1..])
--}
+-}---------------------------------------------------------------------------------------------------------
+-- ToProperty overloadings
+
+class ToProperty c where
+  toProperty :: c -> Property
+
+instance ToProperty Text where
+  toProperty = Property
+
+instance ToProperty Property where
+  toProperty = id
+
+instance ToProperty (Double,Double,Double) where
+  toProperty (a,b,c) = Property $ pack $ unwords $ map show' [a,b,c]
+   where show' v = showFFloat Nothing v ""
+
+instance ToProperty Double where
+  toProperty = Property . pack . show' 
+   where show' v = showFFloat Nothing v ""
+
+instance ToProperty Int where
+  toProperty = Property . pack . show
+
+instance ToProperty () where
+  toProperty () = Property ""
+
+instance ToProperty Bool where
+  toProperty True  = Property "true"
+  toProperty False = Property "false"
