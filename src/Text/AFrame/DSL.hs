@@ -5,6 +5,7 @@ module Text.AFrame.DSL
     DSL,
     scene,
     animation,
+    assets,
     entity,
     box,
     camera,
@@ -25,8 +26,10 @@ module Text.AFrame.DSL
     videosphere,
     -- * Component DSL
     fog,
+    material,
     position,
     rotation,
+    scale,
     stats,
     template,
     wasd_controls,
@@ -41,10 +44,12 @@ module Text.AFrame.DSL
     fill,
     from,
     height,
+    id_,
     radius,
     repeat_,
     src,
     to,
+    transparent,
     width,
     -- * DSL Macros
     fromTo,
@@ -58,6 +63,7 @@ module Text.AFrame.DSL
     primitiveEntity,
     Component,
     component,
+    Attributes,    
     -- * Pretty Printer for DSL
     showAsDSL,
     -- * Others
@@ -72,7 +78,6 @@ import Control.Monad
 import Data.Text(Text,unpack,pack)
 import qualified Data.Text as T
 import Data.String
-import Numeric
 import Text.AFrame
 
 ---------------------------------------------------------------------------------
@@ -173,6 +178,9 @@ entity = primitiveEntity "a-entity"
 animation :: DSL a -> DSL a
 animation = primitiveEntity "a-animation"
 
+assets :: DSL a -> DSL a
+assets = primitiveEntity "a-assets" 
+
 box :: DSL a -> DSL a
 box = primitiveEntity "a-box"
 
@@ -230,11 +238,17 @@ videosphere = primitiveEntity "a-videosphere"
 fog :: Component k => List Attribute () -> k ()
 fog = component "fog"
 
+material :: Component k => List Attribute () -> k ()
+material = component "material"
+
 position :: Component k => (Double,Double,Double) -> k ()
 position = component "position"
 
 rotation :: Component k => (Double,Double,Double) -> k ()
 rotation = component "rotation"
+
+scale :: Component k => (Double,Double,Double) -> k ()
+scale = component "scale"
 
 stats :: Component k => k ()
 stats = component "stats" ()
@@ -278,6 +292,9 @@ repeat_ = attribute "repeat"
 height :: Attributes k => Double -> k ()
 height = attribute "height"
 
+id_ :: Attributes k => Text -> k ()
+id_ = attribute "id" 
+
 radius :: Attributes k => Double -> k ()
 radius = attribute "radius"
 
@@ -286,6 +303,9 @@ src = attribute "src"
 
 to :: Attributes k => Text -> k ()
 to = attribute "to"
+
+transparent :: Attributes k => Bool -> k ()
+transparent = attribute "transparent"
 
 width :: Attributes k => Double -> k ()
 width = attribute "width"
