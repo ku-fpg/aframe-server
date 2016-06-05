@@ -48,5 +48,7 @@ example = scene $ do
  >>> s example
  >>> u (elementById "animation-1"  . attributeByName "dur) "300"
  >>> g (^. singular (elementById "animation-1"  . attributeByName "dur"))
-  -}
+ >>> u (set (nthOfType "a-box" 1 . attributeByName "position" . triple . _3) (-5))
+-}
+
 
