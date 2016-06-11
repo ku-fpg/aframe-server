@@ -39,6 +39,8 @@ COMMAND    | Action                        | Format
 GET /scene | Gets the whole (latest) scene | XML
 GET /status/N | Ask about version #N       | { "change": "HEAD" or "RELOAD" }
 
-Assets
+Assets and Libraries under different LICENSE.
+
  * Fox from http://pngimg.com/img/animals/fox, free download
  * tree1 and 2, etc, taken from aframe-gamepad-controls, which was taken from aframe demo
+ * We use `dat.gui.js`, from https://github.com/dataarts/dat.gui.
