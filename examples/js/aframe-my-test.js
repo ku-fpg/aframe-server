@@ -6,7 +6,7 @@ function findParentGUI(el) {
   if (el.parentEl && 
     el.parentEl.components &&
     el.parentEl.components['selection-folder']) {
-    return el.parentEl.components['selection-folder'].data.folder
+    return el.parentEl.components['selection-folder'].folder
   } else {
     if (datGUI == undefined) {
        datGUI = new dat.GUI();       
@@ -29,10 +29,10 @@ AFRAME.registerComponent('selection-folder', {
          name = this.data.name + " (" + count++ + ")"
      }
 
-     this.data.folder = g.addFolder(name);
+     this.folder = g.addFolder(name);
 
      if (this.data.open) {
-       this.data.folder.open();
+       this.folder.open();
      }
    }
 });
@@ -44,11 +44,11 @@ AFRAME.registerComponent('color-selector', {
    },
    init: function () {
      console.log('color-selector',datGUI);
-     if (datGUI == undefined) {
-        datGUI = new dat.GUI();       
-     }
      var g = findParentGUI(this.el);
-     g.addColor(this.data, 'color').name(this.data.name)
+     var el = this.el;
+     g.addColor(this.data, 'color').name(this.data.name).onChange(function(value) {
+       el.setAttribute('color-selector','color',value);
+     });
    }
 });
 
@@ -67,8 +67,11 @@ AFRAME.registerComponent('number-selector', {
         datGUI = new dat.GUI();       
      }
      var g = findParentGUI(this.el);
+     var el = this.el;
 
-     var s = g.add(this.data, 'number').name(this.data.name);
+     var s = g.add(this.data, 'number').name(this.data.name).onChange(function(value) {
+       el.setAttribute('number-selector','number',value);
+     });
 
      var that = this;
      ['min','max','step'].forEach(function(o) {
