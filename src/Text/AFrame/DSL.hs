@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, OverloadedStrings, KindSignatures, DataKinds, FlexibleInstances, InstanceSigs, RankNTypes #-}
+{-# LANGUAGE GADTs, OverloadedStrings, KindSignatures, DataKinds, DeriveFunctor, FlexibleInstances, InstanceSigs, RankNTypes #-}
 -- | Small monadic DSL for AFrame generation.
 module Text.AFrame.DSL 
   (  -- * Entity DSL
@@ -63,7 +63,11 @@ module Text.AFrame.DSL
     primitiveEntity,
     Component,
     component,
-    Attributes,    
+    Attributes, 
+    -- * GUI operators
+    selectColor,
+    -- * Variable Types
+    Color,
     -- * Pretty Printer for DSL
     showAsDSL,
     -- * Others
@@ -79,6 +83,9 @@ import Data.Text(Text,unpack,pack)
 import qualified Data.Text as T
 import Data.String
 import Text.AFrame
+import Data.Monoid ((<>))
+import Data.Maybe (catMaybes)
+
 
 ---------------------------------------------------------------------------------
 
@@ -86,15 +93,24 @@ class Component f where
   component :: ToProperty c => Label -> c -> f ()
 
 class Attributes f where
-  attribute :: ToProperty c => Label -> c -> f ()
+  attribute :: DynamicProperty c => Label -> c -> f ()
 
 class (Attributes f, Component f) => PrimitiveEntity f where
   primitiveEntity :: Text -> f a -> f a
 
+class ToProperty c => DynamicProperty c where
+  toDynamicProperty :: c -> Expr Property
+  toDynamicProperty = Lit . toProperty
+  
+instance DynamicProperty Text 
+instance DynamicProperty Bool
+instance DynamicProperty Double
+instance DynamicProperty Int
+
 ---------------------------------------------------------------------------------
 -- Primitive DSL
 
-newtype DSL a = DSL { runDSL :: Int -> (a,Int,[Attribute],[AFrame]) }
+newtype DSL a = DSL { runDSL :: Int -> (a,Int,[Attribute],[AFrame],[(Label,Expr Property)]) }
 
 instance Functor DSL where
   fmap f g = pure f <*> g
@@ -104,30 +120,37 @@ instance Applicative DSL where
   (<*>) = ap
 
 instance Monad DSL where
-  return a = DSL $ \ i -> (a,i,[],[])
+  return a = DSL $ \ i -> (a,i,[],[],[])
   DSL m >>= k2 = DSL $ \ i0 -> case m i0 of
-     (r1,i1,as1,af1) -> case runDSL (k2 r1) i1 of
-                        (r2,i2,as2,af2) -> (r2,i2,as1 ++ as2,af1 ++ af2)
+     (r1,i1,as1,af1,gs1) -> case runDSL (k2 r1) i1 of
+                             (r2,i2,as2,af2,gs2) -> (r2,i2,as1 ++ as2,af1 ++ af2,gs1 ++ gs2)
 
 instance PrimitiveEntity DSL where
   primitiveEntity :: Text -> DSL a -> DSL a
   primitiveEntity nm m = DSL $ \ i0 -> case runDSL m i0 of
-     (r1,i1,as1,af1) -> (r1,i1,[],[AFrame (Primitive nm) as1 af1])
+     (r1,i1,as1,af1,gs1) -> (r1,i1,[],[AFrame (Primitive nm) (compile gs1 as1) af1],[])
+    where compile gs as | code == "" = as
+                        | otherwise  = ("behavior",code) : as
+             where code = compileExprs gs
+
                     
 instance Component DSL where
   component :: ToProperty c => Label -> c -> DSL ()
-  component lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[])
+  component lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[],[])
 
 instance Attributes DSL where
-  attribute :: ToProperty c => Label -> c -> DSL ()
-  attribute lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[])
+  attribute :: DynamicProperty c => Label -> c -> DSL ()
+  attribute lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[],[(lab,toDynamicProperty c)])
+
+uniqId :: DSL Property
+uniqId = DSL $ \ i -> (Property (pack $ "id_" ++ show i),i+1,[],[],[])
 
 scene :: DSL () -> AFrame
 scene m = case runDSL (primitiveEntity "a-scene" m) 0 of
-             (_, _, [], [f]) -> f
-             (_, _, _,  [] ) -> error "scene internal error: no top-level primitiveEntity"
-             (_, _, _,  [_]) -> error "scene internal error: top-level attribute"
-             (_, _, _,  _  ) -> error "scene internal error: to many top-level primitiveEntitys"
+             (_, _, [], [f], _) -> f
+             (_, _, _,  [] , _) -> error "scene internal error: no top-level primitiveEntity"
+             (_, _, _,  [_], _) -> error "scene internal error: top-level attribute"
+             (_, _, _,  _  , _) -> error "scene internal error: to many top-level primitiveEntitys"
 
 ---------------------------------------------------------------------------------
 -- Properties DSL
@@ -268,7 +291,7 @@ attribute_ = attribute "attribute"
 begin :: Attributes k => Int -> k ()
 begin = attribute "begin"
 
-color :: Attributes k => Text -> k ()
+color :: Attributes k => Color -> k ()
 color = attribute "color"
 
 direction :: Attributes k => Text -> k ()
@@ -342,6 +365,108 @@ showAsDSL (AFrame p0 as fs) =
         | otherwise = def
       where def = unpack l ++ " " ++ show (unpack p)
 
+
+------------------------------------------------------
+-- Expressions
+
+data Expr :: * -> * where
+  Var    :: Text ->                     Expr a 
+  Lit    :: a ->                        Expr a
+  Infix  :: Text -> Expr a -> Expr a -> Expr a
+  deriving (Show, Functor)
+  
+data Dynamic :: * -> * where
+  Dynamic :: Expr a -> a -> Dynamic a
+  deriving (Show, Functor)
+
+static :: a -> Dynamic a
+static a = Dynamic (Lit a) a
+
+{-  
+data Expr :: * -> * where
+  Var    :: Text ->                     a -> Expr a 
+  Lit    ::                             a -> Expr a
+  Infix  :: Text -> Expr a -> Expr a -> a -> Expr a
+  deriving (Show, Functor)
+-}
+
+-- It is *always* possible to constant fold to the initual value  
+initial :: Dynamic a -> a
+initial (Dynamic _ a) = a
+
+infixOp :: Text -> (a -> a -> a) -> Dynamic a -> Dynamic a -> Dynamic a
+infixOp nm f (Dynamic e1 i1) (Dynamic e2 i2) = Dynamic (Infix nm e1 e2) (f i1 i2)
+
+--functionOp :: Text -> (a -> a -> a) -> Dynamic a -> Dynamic a -> Dynamic a
+--functionOp nm f e1 e2 = Infix nm e1 e2 (f (initial e1) (initial e2))
+
+compileExprs :: [(Label,Expr Property)] -> Property
+compileExprs = Property 
+             . T.intercalate "; " 
+             . catMaybes
+             . map (\ (Label lbl,e) -> case e of
+                   Lit _ -> Nothing
+                   e     -> Just (lbl <> " = " <> compile e))
+  where
+    compile (Var uq) = "id('" <> uq <> "')"
+    compile (Infix op e1 e2) = "(" <> compile e1 <> op <> compile e2 <> ")"
+    compile (Lit (Property e)) = e
+
+------------------------------------------------------
+-- Color
+
+newtype Color = Color (Dynamic Text)
+
+instance Show Color where
+  show (Color c) = show (initial c)
+
+instance ToProperty Color where
+  toProperty (Color e) = Property $ initial e
+
+instance DynamicProperty Color where
+  toDynamicProperty (Color (Dynamic e _)) = toProperty <$> e
+
+instance IsString Color where
+  fromString = Color . static . pack
+
+------------------------------------------------------
+-- Numbers
+
+newtype Number = Number (Dynamic Double)
+
+instance Show Number where
+  show (Number c) = show (initial c)
+
+instance ToProperty Number where
+  toProperty (Number e) = Property $ pack $ show $ initial e
+
+instance DynamicProperty Number where
+  toDynamicProperty (Number (Dynamic e _)) = toProperty <$> e
+
+--      ‘+’, ‘*’, ‘abs’, ‘signum’, and (either ‘negate’ or ‘-’)
+instance Num Number where
+  (Number n1) + (Number n2) = Number (infixOp "+" (+) n1 n2)
+  fromInteger = Number . static . fromInteger
+
+instance Fractional Number where
+  (Number n1) / (Number n2) = Number (infixOp "/" (/) n1 n2)
+  fromRational = Number . static . fromRational
+
+------------------------------------------------------
+-- Selectors
+
+selectColor :: Text -> Color -> DSL Color
+selectColor txt (Color e) = do
+  Property uq <- uniqId
+  let start = initial e
+  primitiveEntity "a-color-selector" $ do
+    id_ uq
+    attribute "color" start
+    attribute "name"  txt
+    return $ Color $ Dynamic (Var uq) start
+
+--     <a-color-selector id="c1" color="#002244" name="foobar"></a-color-selector>
+--  selector txt $ SelectColor (initial e)
 
 ------------------------------------------------------
 -- Macros
