@@ -14,6 +14,7 @@ example = scene $ do
   c <- colorSelector "color" "#123456"
   h <- numberSelector "height" 1 (0,5)
   r <- numberSelector "rot" 0 (0,360)
+  xyz <- vec3Selector "position" (-1,0.5,1) (-5,5)
   sphere $ do
     position (0,1.25,-1)
     radius   1.25
@@ -29,7 +30,7 @@ example = scene $ do
         repeat_ "indefinite"
   box $ do
     attribute "id" ("box" :: Text)
-    position (-1,0.5,1)
+    position xyz 
     rotation (r,45,0)
     width    1
     height   h

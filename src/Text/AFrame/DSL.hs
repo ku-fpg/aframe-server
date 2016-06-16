@@ -67,6 +67,7 @@ module Text.AFrame.DSL
     -- * GUI operators
     colorSelector,
     numberSelector,
+    vec3Selector,
     selectionFolder,
     -- * Variable Types
     Color,
@@ -270,7 +271,7 @@ fog = component "fog"
 material :: Component k => List Attribute () -> k ()
 material = component "material"
 
-position :: Component k => (Double,Double,Double) -> k ()
+position :: Component k => (Number,Number,Number) -> k ()
 position = component "position"
 
 rotation :: Component k => (Number,Number,Number) -> k ()
@@ -482,7 +483,6 @@ selectionFolder txt inner = do
     attribute "name"  txt
     inner
 
-
 colorSelector :: Text -> Color -> DSL Color
 colorSelector txt (Color e) = do
   Property uq <- uniqId
@@ -493,7 +493,7 @@ colorSelector txt (Color e) = do
     attribute "name"  txt
     return $ Color $ Dynamic (Var uq) start
 
-numberSelector :: Text -> Int -> (Int,Int) -> DSL Number
+numberSelector :: Text -> Double -> (Double,Double) -> DSL Number
 numberSelector txt start (low,high) = do
   Property uq <- uniqId
   primitiveEntity "a-number-selector" $ do
@@ -502,11 +502,17 @@ numberSelector txt start (low,high) = do
     attribute "name"  txt
     attribute "min"   low
     attribute "max"   high
-    return $ Number $ Dynamic (Var uq) $ fromIntegral start
+    return $ Number $ Dynamic (Var uq) $ start
 
 
---     <a-color-selector id="c1" color="#002244" name="foobar"></a-color-selector>
---  selector txt $ SelectColor (initial e)
+vec3Selector :: Text -> (Double,Double,Double) -> (Double,Double) -> DSL (Number,Number,Number)
+vec3Selector nm (x,y,z) (mx,mn) = do
+  selectionFolder nm $ do
+    x <- numberSelector "x" x (mx,mn)
+    y <- numberSelector "y" y (mx,mn)
+    z <- numberSelector "z" z (mx,mn)
+    return (x,y,z)
+
 
 ------------------------------------------------------
 -- Macros
