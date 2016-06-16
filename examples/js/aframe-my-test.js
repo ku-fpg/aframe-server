@@ -15,14 +15,12 @@ function findParentGUI(el) {
   }
 }
 
-
 AFRAME.registerComponent('selection-folder', {
    schema: {
      name: { default: 'folder', type: 'string' },
      open: { default: true, type: 'boolean' }
    },
    init: function () {
-     console.log('selection-folder',datGUI);
      var g = findParentGUI(this.el);
      var name = this.data.name;
      var count = 2;
@@ -44,7 +42,6 @@ AFRAME.registerComponent('color-selector', {
      name: { default: 'color', type: 'string' }
    },
    init: function () {
-     console.log('color-selector',datGUI);
      var g = findParentGUI(this.el);
      var el = this.el;
      function change(value) {
@@ -67,26 +64,26 @@ AFRAME.registerPrimitive('a-color-selector',{
 
 AFRAME.registerComponent('number-selector', {
    schema: {
-     number: { default: '0', type: 'number' },
+     value: { default: '0', type: 'number' },
      name: { default: 'number', type: 'string' },
      min: { default: null, type: 'number' },
      max: { default: null, type: 'number' },
      step: { default: null, type: 'number' }
    },
    init: function () {
-     console.log('number-selector',datGUI);
-     console.log(this.data)
+//     console.log('number-selector',datGUI);
+//     console.log(this.data)
      if (datGUI == undefined) {
         datGUI = new dat.GUI();       
      }
      var g = findParentGUI(this.el);
      var el = this.el;
 
-     var s = g.add(this.data, 'number').name(this.data.name).onChange(function(value) {
+     var s = g.add(this.data, 'value').name(this.data.name).onChange(function(value) {
        if (el.tagName == "A-NUMBER-SELECTOR") { 
-         el.setAttribute('number',value);
+         el.setAttribute('value',value);
        } else {
-         el.setAttribute('number-selector','number',value);
+         el.setAttribute('number-selector','value',value);
        }
      });
 
@@ -100,11 +97,8 @@ AFRAME.registerComponent('number-selector', {
 });
 
 AFRAME.registerPrimitive('a-number-selector',{
-  defaultComponents: {
-    "number-selector": { }
-  },
   mappings: {
-    number: 'number-selector.number',
+    valuex: 'number-selector.value',
     name: 'number-selector.name',
     min: 'number-selector.min',
     max: 'number-selector.max',
@@ -113,42 +107,52 @@ AFRAME.registerPrimitive('a-number-selector',{
 });
 
 
-AFRAME.registerComponent('frp', {
-  schema: {
-    attribute: { default: null, type: 'string' },
-    behavior:  { default: null, type: 'string' }
-  },
-   init: function () {
+AFRAME.registerComponent('behavior', {
+  schema: { default: "", type: 'string' },
+  init: function () {
      console.log('frp',this.data);
-   },
-   tick: function(o) {
-     var self = this;
-     var target  = this.el.parentEl;
-     var oldAttr = target.getAttribute(this.data.attribute);
-     var env =
-       { vec3: function(x,y,z) { return {x:x,y:y,z:z}; },
-         "$": function(o) { 
-            var el = document.getElementById(o);
-            return 0;
-        }
-       };
-     var res = undefined;
-     try { 
-       with (env) { res = eval(this.data.behavior); }
-     } 
-     catch(ex) {
-       console.log(ex);
-     }
-//     console.log("frp",res);
-     target.setAttribute("rotation",{x:o/10,y:0,z:0});
-       if (this.done == undefined) {
-       console.log("frp",this,target);
-       this.done = true;
-     }
+  },
+  tick: function(o) {
+    var self = this;
+    var target  = this.el.parentEl;
+    var oldAttr = target.getAttribute(this.data.attribute);
+    var env =
+     { vec3: function(x,y,z) { return {x:x,y:y,z:z}; },
+       "$": function(o) { 
+         var el = document.getElementById(o);
+         var value = el.getAttribute("value");
+         var type  = el.getAttribute("type");
+         return 0;
+      }
+     };
 
-//     console.log('frp-tick',o);
-   }
- });
+    var self = this;
+    xxx = this;
+    Object.keys(this.el.attributes).forEach(function (ix) {
+       var name = self.el.attributes[ix].name;
+         if (self.el.hasAttribute(name)) {
+           env[name] = self.el.getAttribute(name);
+         }
+    });
+
+    var copy = AFRAME.utils.extendDeep({},env);
+    var res = undefined;
+    try { 
+     with (env) { res = eval(this.data); }
+    } 
+    catch(ex) {
+        console.log(ex);
+    }
+    Object.keys(this.el.attributes).forEach(function (ix) {
+        var name = self.el.attributes[ix].name;
+//        console.log(ix,env[ix],copy[ix])
+        if (env[name] !== copy[name]) {
+//          console.log("updating",name,env[name],copy[name])
+          self.el.setAttribute(name,env[name])
+        }
+      });
+  }
+});
 
  AFRAME.registerPrimitive('a-frp',{
    mappings: {
