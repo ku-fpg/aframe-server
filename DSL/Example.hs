@@ -15,19 +15,16 @@ example = scene $ do
   h <- numberSelector "height" 1 (0,5)
   r <- numberSelector "rot" 0 (0,360)
   xyz <- vec3Selector "position" (-1,0.5,1) (-5,5)
+  mt <- numberSelector "metalness" 0.0 (0,1)
+  op <- numberSelector "opacity"   1.0 (0,1)
+  ro <- numberSelector "roughness" 0.5 (0,1)
   sphere $ do
     position (0,1.25,-1)
     radius   1.25
     color    "#EF2D5E"
-    animation $ do
-        attribute "id" ("animation-1" :: Text)
-        fromTo position
-              (0,1.25,-1)
-              (0,1.00,-1)
-        direction "alternate"
-        easing "linear"
-        dur 1000
-        repeat_ "indefinite"
+    metalness mt
+    opacity	op
+    roughness ro
   box $ do
     attribute "id" ("box" :: Text)
     position xyz 

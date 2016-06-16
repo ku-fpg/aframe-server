@@ -102,8 +102,7 @@ AFRAME.registerComponent('number-selector', {
        }
      };
      change(this.data.value)
-     var s = g.add(this.data, 'value').name(this.data.name);
-
+     var s = g.add(this.data, 'value')
      var that = this;
      ['min','max','step'].forEach(function(o) {
        if (that.data[o] != null) {
@@ -111,6 +110,7 @@ AFRAME.registerComponent('number-selector', {
        }
      });
 
+     s.name(this.data.name);
      s.onChange(change);
 
    }

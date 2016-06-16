@@ -45,8 +45,11 @@ module Text.AFrame.DSL
     from,
     height,
     id_,
+    metalness,
+    opacity,
     radius,
     repeat_,
+    roughness,
     src,
     to,
     transparent,
@@ -317,17 +320,26 @@ fill = attribute "fill"
 from :: Attributes k => Text -> k ()
 from = attribute "from"
 
-repeat_ :: Attributes k => Text -> k ()
-repeat_ = attribute "repeat"
-
 height :: Attributes k => Number -> k ()
 height = attribute "height"
 
 id_ :: Attributes k => Text -> k ()
 id_ = attribute "id" 
 
+metalness :: Attributes k => Number -> k ()
+metalness = attribute "metalness"
+
+opacity :: Attributes k => Number -> k ()
+opacity = attribute "opacity"
+
 radius :: Attributes k => Double -> k ()
 radius = attribute "radius"
+
+repeat_ :: Attributes k => Text -> k ()
+repeat_ = attribute "repeat"
+
+roughness :: Attributes k => Number -> k ()
+roughness = attribute "roughness"
 
 src :: Attributes k => Text -> k ()
 src = attribute "src"
@@ -416,7 +428,8 @@ compileExprs = Property
              . T.intercalate "; " 
              . catMaybes
              . map (\ (Label lbl,e) -> case e of
---                   Lit _ -> Nothing
+                   LitNumber _ -> Nothing
+                   LitText _ -> Nothing
                    e     -> Just (lbl <> " = " <> compile e))
   where
     compile (Var uq) = "id('" <> uq <> "')"
