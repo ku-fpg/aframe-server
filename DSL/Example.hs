@@ -14,7 +14,7 @@ example = scene $ do
   c <- colorSelector "color" "#123456"
   h <- numberSelector "height" 1 $ return (0,5)
   r <- numberSelector "rot" 0 $ return (0,360)
-  xyz <- vec3Selector "position" (-1,0.5,1) (-5,5)
+--  xyz <- vec3Selector "position" (-1,0.5,1) (-5,5)
   mt <- numberSelector "metalness" 0.0 $ return (0,1)
   op <- numberSelector "opacity"   1.0 $ return (0,1)
   ro <- numberSelector "roughness" 0.5 $ return (0,1)
@@ -27,11 +27,11 @@ example = scene $ do
     roughness ro
   box $ do
     attribute "id" ("box" :: Text)
-    position xyz 
-    rotation (r,45,0)
+    position ?(-1,0.5,1) -- xyz 
+    rotation ?(r,45,0)
     width    1
     height   h
-    scale   (1,1,1)
+    scale   ?(1,1,1)
     color    c
   cylinder $ do
     position (1,0.75+sin(now / 1000),1) 

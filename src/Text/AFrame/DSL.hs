@@ -73,6 +73,7 @@ module Text.AFrame.DSL
     vec3Selector,
     selectionFolder,
     now,
+    (?),
     -- * Variable Types
     Color,
     Number,
@@ -163,6 +164,12 @@ scene m = case runDSL (primitiveEntity "a-scene" m) 0 of
              (_, _, _,  [] , _) -> error "scene internal error: no top-level primitiveEntity"
              (_, _, _,  [_], _) -> error "scene internal error: top-level attribute"
              (_, _, _,  _  , _) -> error "scene internal error: to many top-level primitiveEntitys"
+
+
+guessLabel :: DSL () -> Maybe Label
+guessLabel m = case runDSL m 0 of
+                ((),_,[(lab,_)],_,_) -> return lab
+                _                    -> Nothing
 
 ---------------------------------------------------------------------------------
 -- Properties DSL
@@ -543,6 +550,30 @@ vec3Selector nm (x,y,z) (mx,mn) = do
     y <- numberSelector "y" y $ return (mx,mn)
     z <- numberSelector "z" z $ return (mx,mn)
     return (x,y,z)
+
+class EditProperty p where
+  (?) :: (p -> DSL ()) -> p -> DSL ()
+
+
+instance EditProperty (Number,Number,Number) where
+  fn ? a@(Number x,Number y,Number z) = do
+          let x0 = initial x
+              y0 = initial y
+              z0 = initial z
+              mx = maximum [x0,y0,z0]
+              mn = minimum [x0,y0,z0]
+              (txt,range) = case guessLabel (fn a) of
+                       Just lab | lab == "rotation" -> ("rotation", return (min (-180) mn , max 360 mx))
+                                | lab == "scale"    -> ("scale",    return (min (-1) mn   , max 10 mx))
+                                | lab == "position" -> ("position", return (min (-10) mn  , max 10 mx))
+                       _                            -> ("vec3",     Nothing)
+                       
+          (x,y,z) <- selectionFolder txt $ do
+            x <- numberSelector "x" x0 range
+            y <- numberSelector "y" y0 range
+            z <- numberSelector "z" z0 range
+            return $ (x,y,z)
+          fn (x,y,z)
 
 
 ------------------------------------------------------
