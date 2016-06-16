@@ -79,13 +79,16 @@ AFRAME.registerComponent('number-selector', {
      var g = findParentGUI(this.el);
      var el = this.el;
 
-     var s = g.add(this.data, 'value').name(this.data.name).onChange(function(value) {
+     var change = function(value) {
        if (el.tagName == "A-NUMBER-SELECTOR") { 
          el.setAttribute('value',value);
+         el.setAttribute('type','number');
        } else {
          el.setAttribute('number-selector','value',value);
        }
-     });
+     };
+     change(this.data.value)
+     var s = g.add(this.data, 'value').name(this.data.name).onChange(change);
 
      var that = this;
      ['min','max','step'].forEach(function(o) {
@@ -98,7 +101,7 @@ AFRAME.registerComponent('number-selector', {
 
 AFRAME.registerPrimitive('a-number-selector',{
   mappings: {
-    valuex: 'number-selector.value',
+    value: 'number-selector.value',
     name: 'number-selector.name',
     min: 'number-selector.min',
     max: 'number-selector.max',
@@ -122,8 +125,10 @@ AFRAME.registerComponent('behavior', {
          var el = document.getElementById(o);
          var value = el.getAttribute("value");
          var type  = el.getAttribute("type");
-         
-         return 0;
+         if (type == 'number') {
+           return parseInt(value);
+         }
+         return value;
       }
      };
 
