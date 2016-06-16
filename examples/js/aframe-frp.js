@@ -132,7 +132,7 @@ AFRAME.registerComponent('behavior', {
   init: function () {
      console.log('frp!',this.data);
   },
-  tick: function(o) {
+  tick: function(now) {
     var self = this;
     var target  = this.el.parentEl;
     var oldAttr = target.getAttribute(this.data.attribute);
@@ -146,7 +146,9 @@ AFRAME.registerComponent('behavior', {
            return parseFloat(value);
          }
          return value;
-      }
+      },
+      now: now,
+      sin: Math.sin
      };
 
     var self = this;

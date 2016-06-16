@@ -37,7 +37,7 @@ example = scene $ do
     scale    (1,1,1)
     color    c
   cylinder $ do
-    position (1,0.75,1) 
+    position (1,0.75+sin(now / 1000),1) 
     radius   0.5
     height   1.5
     color    "#FFC65D"

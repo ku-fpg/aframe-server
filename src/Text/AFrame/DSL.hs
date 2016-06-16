@@ -64,11 +64,12 @@ module Text.AFrame.DSL
     Component,
     component,
     Attributes, 
-    -- * GUI operators
+    -- * FRP operators
     colorSelector,
     numberSelector,
     vec3Selector,
     selectionFolder,
+    now,
     -- * Variable Types
     Color,
     -- * Pretty Printer for DSL
@@ -381,6 +382,8 @@ data Expr :: * where
   LitNumber :: Double ->            Expr    -- 2.23
   LitText   :: Text ->              Expr    -- "LDC#"
   Infix  :: Text -> Expr -> Expr -> Expr
+  Prim0  :: Text                 -> Expr
+  Prim1  :: Text -> Expr         -> Expr
   Vec3   :: Expr -> Expr -> Expr -> Expr
   deriving Show
 
@@ -391,20 +394,19 @@ data Dynamic :: * -> * where
 static :: (a -> Expr) -> a -> Dynamic a
 static f a = Dynamic (f a) a
 
-{-  
-data Expr :: * -> * where
-  Var    :: Text ->                     a -> Expr a 
-  Lit    ::                             a -> Expr a
-  Infix  :: Text -> Expr a -> Expr a -> a -> Expr a
-  deriving (Show, Functor)
--}
-
 -- It is *always* possible to constant fold to the initual value  
 initial :: Dynamic a -> a
 initial (Dynamic _ a) = a
 
 infixOp :: Text -> (a -> a -> a) -> Dynamic a -> Dynamic a -> Dynamic a
 infixOp nm f (Dynamic e1 i1) (Dynamic e2 i2) = Dynamic (Infix nm e1 e2) (f i1 i2)
+
+prim0 :: Text -> a -> Dynamic a
+prim0 nm a = Dynamic (Prim0 nm) a 
+
+prim1 :: Text -> (a -> b) -> Dynamic a -> Dynamic b
+prim1 nm f (Dynamic e1 i1) = Dynamic (Prim1 nm e1) (f i1)
+
 
 --functionOp :: Text -> (a -> a -> a) -> Dynamic a -> Dynamic a -> Dynamic a
 --functionOp nm f e1 e2 = Infix nm e1 e2 (f (initial e1) (initial e2))
@@ -421,7 +423,9 @@ compileExprs = Property
     compile (Infix op e1 e2) = "(" <> compile e1 <> op <> compile e2 <> ")"
     compile (LitNumber n) = t
         where Property t = toProperty n
-    compile (LitText txt) = pack $ show txt
+    compile (LitText txt) = "'" <> txt <> "'"
+    compile (Prim0 nm) = nm
+    compile (Prim1 nm e1) = nm <> "(" <> compile e1 <> ")"
     compile (Vec3 e1 e2 e3) = "vec3(" <> compile e1 <> "," <> compile e2 <> "," <> compile e3 <> ")"
     compile other = error $ "compile: " ++ show other
 
@@ -447,6 +451,9 @@ instance IsString Color where
 
 newtype Number = Number (Dynamic Double)
 
+now :: Number 
+now = Number (prim0 "now" 0)
+
 instance Show Number where
   show (Number c) = show (initial c)
 
@@ -468,11 +475,17 @@ instance DynamicProperty (Number,Number,Number) where
 instance Num Number where
   (Number n1) - (Number n2) = Number (infixOp "-" (-) n1 n2)
   (Number n1) + (Number n2) = Number (infixOp "+" (+) n1 n2)
+  (Number n1) * (Number n2) = Number (infixOp "*" (*) n1 n2)
   fromInteger = Number . static LitNumber . fromInteger
 
 instance Fractional Number where
   (Number n1) / (Number n2) = Number (infixOp "/" (/) n1 n2)
   fromRational = Number . static LitNumber . fromRational
+
+instance Floating Number where
+  pi = Number (prim0 "pi" pi)
+  sin (Number n) = Number (prim1 "sin" sin n)
+
 
 ------------------------------------------------------
 -- Selectors
