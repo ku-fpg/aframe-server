@@ -56,3 +56,15 @@ executable aframe-server
   hs-source-dirs:      server
   default-language:    Haskell2010
          
+executable dsl-example
+  main-is:             Example.hs
+  hs-source-dirs:      DSL
+  build-depends:       base >=4.8 && <4.9
+               ,       aframe-server == 0.1.0.0
+               ,       text == 1.2.*
+               ,       microlens == 0.4.4.0
+  -- hs-source-dirs:      
+  GHC-options:         -threaded 
+  -- -Wall
+  default-language:    Haskell2010
+

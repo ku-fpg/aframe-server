@@ -37,6 +37,9 @@ AFRAME.registerComponent('selection-folder', {
 });
 
 AFRAME.registerPrimitive('a-selection-folder',{
+  defaultComponents: {
+      "selection-folder": {}
+    },
   mappings: {
     name:  'selection-folder.name',
     value: 'selection-folder.value'
@@ -63,6 +66,9 @@ AFRAME.registerComponent('color-selector', {
 });
 
 AFRAME.registerPrimitive('a-color-selector',{
+  defaultComponents: {
+      "color-selector": {}
+    },
   mappings: {
     name:  'color-selector.name',
     value: 'color-selector.value'
@@ -78,6 +84,7 @@ AFRAME.registerComponent('number-selector', {
      step: { default: null, type: 'number' }
    },
    init: function () {
+
 //     console.log('number-selector',datGUI);
 //     console.log(this.data)
      if (datGUI == undefined) {
@@ -87,6 +94,7 @@ AFRAME.registerComponent('number-selector', {
      var el = this.el;
 
      var change = function(value) {
+       console.log("callback",value)
        if (el.tagName == "A-NUMBER-SELECTOR") { 
          el.setAttribute('value',value);
          el.setAttribute('type','number');
@@ -95,7 +103,7 @@ AFRAME.registerComponent('number-selector', {
        }
      };
      change(this.data.value)
-     var s = g.add(this.data, 'value').name(this.data.name).onChange(change);
+     var s = g.add(this.data, 'value').name(this.data.name);
 
      var that = this;
      ['min','max','step'].forEach(function(o) {
@@ -103,6 +111,9 @@ AFRAME.registerComponent('number-selector', {
          s = s[o](that.data[o]);
        }
      });
+
+     s.onChange(change);
+
    }
 });
 
@@ -120,7 +131,7 @@ AFRAME.registerPrimitive('a-number-selector',{
 AFRAME.registerComponent('behavior', {
   schema: { default: "", type: 'string' },
   init: function () {
-     console.log('frp',this.data);
+     console.log('frp!',this.data);
   },
   tick: function(o) {
     var self = this;
@@ -133,7 +144,7 @@ AFRAME.registerComponent('behavior', {
          var value = el.getAttribute("value");
          var type  = el.getAttribute("type");
          if (type == 'number') {
-           return parseInt(value);
+           return parseFloat(value);
          }
          return value;
       }

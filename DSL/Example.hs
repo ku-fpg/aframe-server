@@ -1,4 +1,4 @@
-{-# LANGUAGE  RankNTypes, FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE  RankNTypes, FlexibleInstances, UndecidableInstances, OverloadedStrings #-}
 
 module Main where
 
@@ -11,7 +11,8 @@ import Lens.Micro
 
 example :: AFrame
 example = scene $ do
-  c <- colorSelector "color" "red"
+  c <- colorSelector "color" "#123456"
+  h <- numberSelector "height" 1 (0,5)
   sphere $ do
     position (0,1.25,-1)
     radius   1.25
@@ -30,7 +31,7 @@ example = scene $ do
     position (-1,0.5,1)
     rotation (0,45,0)
     width    1
-    height   1
+    height   h
     scale    (1,1,1)
     color    c
   cylinder $ do

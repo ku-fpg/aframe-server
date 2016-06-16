@@ -66,6 +66,8 @@ module Text.AFrame.DSL
     Attributes, 
     -- * GUI operators
     colorSelector,
+    numberSelector,
+    selectionFolder,
     -- * Variable Types
     Color,
     -- * Pretty Printer for DSL
@@ -312,7 +314,7 @@ from = attribute "from"
 repeat_ :: Attributes k => Text -> k ()
 repeat_ = attribute "repeat"
 
-height :: Attributes k => Double -> k ()
+height :: Attributes k => Number -> k ()
 height = attribute "height"
 
 id_ :: Attributes k => Text -> k ()
@@ -455,15 +457,34 @@ instance Fractional Number where
 ------------------------------------------------------
 -- Selectors
 
+selectionFolder :: Text -> DSL a -> DSL a
+selectionFolder txt inner = do
+  primitiveEntity "a-selection-folder" $ do
+    attribute "name"  txt
+    inner
+
+
 colorSelector :: Text -> Color -> DSL Color
 colorSelector txt (Color e) = do
   Property uq <- uniqId
   let start = initial e
   primitiveEntity "a-color-selector" $ do
     id_ uq
-    attribute "color" start
+    attribute "value" start
     attribute "name"  txt
     return $ Color $ Dynamic (Var uq) start
+
+numberSelector :: Text -> Int -> (Int,Int) -> DSL Number
+numberSelector txt start (low,high) = do
+  Property uq <- uniqId
+  primitiveEntity "a-number-selector" $ do
+    id_ uq
+    attribute "value" start
+    attribute "name"  txt
+    attribute "min"   low
+    attribute "max"   high
+    return $ Number $ Dynamic (Var uq) $ fromIntegral start
+
 
 --     <a-color-selector id="c1" color="#002244" name="foobar"></a-color-selector>
 --  selector txt $ SelectColor (initial e)
