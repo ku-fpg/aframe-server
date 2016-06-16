@@ -65,7 +65,7 @@ module Text.AFrame.DSL
     component,
     Attributes, 
     -- * GUI operators
-    selectColor,
+    colorSelector,
     -- * Variable Types
     Color,
     -- * Pretty Printer for DSL
@@ -455,8 +455,8 @@ instance Fractional Number where
 ------------------------------------------------------
 -- Selectors
 
-selectColor :: Text -> Color -> DSL Color
-selectColor txt (Color e) = do
+colorSelector :: Text -> Color -> DSL Color
+colorSelector txt (Color e) = do
   Property uq <- uniqId
   let start = initial e
   primitiveEntity "a-color-selector" $ do

@@ -6,10 +6,12 @@ import Data.Text (Text)
 import Text.AFrame
 import Text.AFrame.DSL 
 import Web.AFrame.GHCi
+import Web.AFrame
 import Lens.Micro
 
 example :: AFrame
 example = scene $ do
+  c <- colorSelector "color" "red"
   sphere $ do
     position (0,1.25,-1)
     radius   1.25
@@ -29,7 +31,8 @@ example = scene $ do
     rotation (0,45,0)
     width    1
     height   1
-    color    "#4CC3D9"
+    scale    (1,1,1)
+    color    c
   cylinder $ do
     position (1,0.75,1) 
     radius   0.5
@@ -51,4 +54,10 @@ example = scene $ do
  >>> u (set (nthOfType "a-box" 1 . attributeByName "position" . triple . _3) (-5))
 -}
 
-
+main = aframeStart opts $ example
+ where opts = defaultOptions 
+         { jsFiles = 
+              [ "/examples/js/aframe-frp.js"
+              ,"https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"
+              ] 
+         }
