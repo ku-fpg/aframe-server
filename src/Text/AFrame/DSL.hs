@@ -75,6 +75,7 @@ module Text.AFrame.DSL
     now,
     -- * Variable Types
     Color,
+    Number,
     -- * Pretty Printer for DSL
     showAsDSL,
     -- * Others
@@ -281,7 +282,7 @@ position = component "position"
 rotation :: Component k => (Number,Number,Number) -> k ()
 rotation = component "rotation"
 
-scale :: Component k => (Double,Double,Double) -> k ()
+scale :: Component k => (Number,Number,Number) -> k ()
 scale = component "scale"
 
 stats :: Component k => k ()
@@ -519,24 +520,28 @@ colorSelector txt (Color e) = do
     attribute "name"  txt
     return $ Color $ Dynamic (Var uq) start
 
-numberSelector :: Text -> Double -> (Double,Double) -> DSL Number
-numberSelector txt start (low,high) = do
+numberSelector :: Text -> Double -> Maybe (Double,Double) -> DSL Number
+numberSelector txt start lowHigh = do
   Property uq <- uniqId
   primitiveEntity "a-number-selector" $ do
     id_ uq
     attribute "value" start
     attribute "name"  txt
-    attribute "min"   low
-    attribute "max"   high
+    case lowHigh of
+      Just (low,high) -> do
+        attribute "min"   low
+        attribute "max"   high
+      Nothing -> return ()
+              
     return $ Number $ Dynamic (Var uq) $ start
 
 
 vec3Selector :: Text -> (Double,Double,Double) -> (Double,Double) -> DSL (Number,Number,Number)
 vec3Selector nm (x,y,z) (mx,mn) = do
   selectionFolder nm $ do
-    x <- numberSelector "x" x (mx,mn)
-    y <- numberSelector "y" y (mx,mn)
-    z <- numberSelector "z" z (mx,mn)
+    x <- numberSelector "x" x $ return (mx,mn)
+    y <- numberSelector "y" y $ return (mx,mn)
+    z <- numberSelector "z" z $ return (mx,mn)
     return (x,y,z)
 
 
