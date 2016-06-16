@@ -118,31 +118,34 @@ AFRAME.registerComponent('behavior', {
     var oldAttr = target.getAttribute(this.data.attribute);
     var env =
      { vec3: function(x,y,z) { return {x:x,y:y,z:z}; },
-       "$": function(o) { 
+       id: function(o) { 
          var el = document.getElementById(o);
          var value = el.getAttribute("value");
          var type  = el.getAttribute("type");
+         
          return 0;
       }
      };
 
     var self = this;
-    xxx = this;
+
     Object.keys(this.el.attributes).forEach(function (ix) {
        var name = self.el.attributes[ix].name;
-         if (self.el.hasAttribute(name)) {
+         if (env[name] == undefined && self.el.hasAttribute(name)) {
            env[name] = self.el.getAttribute(name);
          }
     });
 
     var copy = AFRAME.utils.extendDeep({},env);
-    var res = undefined;
     try { 
-     with (env) { res = eval(this.data); }
+      with (env) { 
+        eval(this.data); 
+      }
     } 
     catch(ex) {
         console.log(ex);
     }
+
     Object.keys(this.el.attributes).forEach(function (ix) {
         var name = self.el.attributes[ix].name;
 //        console.log(ix,env[ix],copy[ix])
