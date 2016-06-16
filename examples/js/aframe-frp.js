@@ -94,7 +94,6 @@ AFRAME.registerComponent('number-selector', {
      var el = this.el;
 
      var change = function(value) {
-       console.log("callback",value)
        if (el.tagName == "A-NUMBER-SELECTOR") { 
          el.setAttribute('value',value);
          el.setAttribute('type','number');

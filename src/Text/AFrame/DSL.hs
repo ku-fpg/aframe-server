@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, OverloadedStrings, KindSignatures, DataKinds, DeriveFunctor, FlexibleInstances, InstanceSigs, RankNTypes #-}
+{-# LANGUAGE GADTs, OverloadedStrings, StandaloneDeriving, KindSignatures, DataKinds, DeriveFunctor, FlexibleInstances, InstanceSigs, RankNTypes #-}
 -- | Small monadic DSL for AFrame generation.
 module Text.AFrame.DSL 
   (  -- * Entity DSL
@@ -87,12 +87,12 @@ import Data.String
 import Text.AFrame
 import Data.Monoid ((<>))
 import Data.Maybe (catMaybes)
-
+import Numeric
 
 ---------------------------------------------------------------------------------
 
 class Component f where
-  component :: ToProperty c => Label -> c -> f ()
+  component :: DynamicProperty c => Label -> c -> f ()
 
 class Attributes f where
   attribute :: DynamicProperty c => Label -> c -> f ()
@@ -101,18 +101,22 @@ class (Attributes f, Component f) => PrimitiveEntity f where
   primitiveEntity :: Text -> f a -> f a
 
 class ToProperty c => DynamicProperty c where
-  toDynamicProperty :: c -> Expr Property
-  toDynamicProperty = Lit . toProperty
+  toDynamicProperty :: c -> Maybe Expr
+  toDynamicProperty _ = Nothing
   
 instance DynamicProperty Text 
 instance DynamicProperty Bool
 instance DynamicProperty Double
 instance DynamicProperty Int
+instance DynamicProperty ()
+instance DynamicProperty (List Attribute ())
+instance DynamicProperty (Double,Double,Double)
+
 
 ---------------------------------------------------------------------------------
 -- Primitive DSL
 
-newtype DSL a = DSL { runDSL :: Int -> (a,Int,[Attribute],[AFrame],[(Label,Expr Property)]) }
+newtype DSL a = DSL { runDSL :: Int -> (a,Int,[Attribute],[AFrame],[(Label,Expr)]) }
 
 instance Functor DSL where
   fmap f g = pure f <*> g
@@ -137,12 +141,12 @@ instance PrimitiveEntity DSL where
 
                     
 instance Component DSL where
-  component :: ToProperty c => Label -> c -> DSL ()
-  component lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[],[])
+  component :: DynamicProperty c => Label -> c -> DSL ()
+  component lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[],[(lab,p) | Just p <- [toDynamicProperty c]])
 
 instance Attributes DSL where
   attribute :: DynamicProperty c => Label -> c -> DSL ()
-  attribute lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[],[(lab,toDynamicProperty c)])
+  attribute lab c = DSL $ \ i0 -> ((),i0,[(lab,toProperty c)],[],[(lab,p) | Just p <- [toDynamicProperty c]])
 
 uniqId :: DSL Property
 uniqId = DSL $ \ i -> (Property (pack $ "id_" ++ show i),i+1,[],[],[])
@@ -269,7 +273,7 @@ material = component "material"
 position :: Component k => (Double,Double,Double) -> k ()
 position = component "position"
 
-rotation :: Component k => (Double,Double,Double) -> k ()
+rotation :: Component k => (Number,Number,Number) -> k ()
 rotation = component "rotation"
 
 scale :: Component k => (Double,Double,Double) -> k ()
@@ -371,18 +375,20 @@ showAsDSL (AFrame p0 as fs) =
 ------------------------------------------------------
 -- Expressions
 
-data Expr :: * -> * where
-  Var    :: Text ->                     Expr a 
-  Lit    :: a ->                        Expr a
-  Infix  :: Text -> Expr a -> Expr a -> Expr a
-  deriving (Show, Functor)
-  
+data Expr :: * where
+  Var    :: Text ->                 Expr
+  LitNumber :: Double ->            Expr    -- 2.23
+  LitText   :: Text ->              Expr    -- "LDC#"
+  Infix  :: Text -> Expr -> Expr -> Expr
+  Vec3   :: Expr -> Expr -> Expr -> Expr
+  deriving Show
+
 data Dynamic :: * -> * where
-  Dynamic :: Expr a -> a -> Dynamic a
+  Dynamic :: Expr -> a -> Dynamic a
   deriving (Show, Functor)
 
-static :: a -> Dynamic a
-static a = Dynamic (Lit a) a
+static :: (a -> Expr) -> a -> Dynamic a
+static f a = Dynamic (f a) a
 
 {-  
 data Expr :: * -> * where
@@ -402,17 +408,21 @@ infixOp nm f (Dynamic e1 i1) (Dynamic e2 i2) = Dynamic (Infix nm e1 e2) (f i1 i2
 --functionOp :: Text -> (a -> a -> a) -> Dynamic a -> Dynamic a -> Dynamic a
 --functionOp nm f e1 e2 = Infix nm e1 e2 (f (initial e1) (initial e2))
 
-compileExprs :: [(Label,Expr Property)] -> Property
+compileExprs :: [(Label,Expr)] -> Property
 compileExprs = Property 
              . T.intercalate "; " 
              . catMaybes
              . map (\ (Label lbl,e) -> case e of
-                   Lit _ -> Nothing
+--                   Lit _ -> Nothing
                    e     -> Just (lbl <> " = " <> compile e))
   where
     compile (Var uq) = "id('" <> uq <> "')"
     compile (Infix op e1 e2) = "(" <> compile e1 <> op <> compile e2 <> ")"
-    compile (Lit (Property e)) = e
+    compile (LitNumber n) = t
+        where Property t = toProperty n
+    compile (LitText txt) = pack $ show txt
+    compile (Vec3 e1 e2 e3) = "vec3(" <> compile e1 <> "," <> compile e2 <> "," <> compile e3 <> ")"
+    compile other = error $ "compile: " ++ show other
 
 ------------------------------------------------------
 -- Color
@@ -426,10 +436,10 @@ instance ToProperty Color where
   toProperty (Color e) = Property $ initial e
 
 instance DynamicProperty Color where
-  toDynamicProperty (Color (Dynamic e _)) = toProperty <$> e
+  toDynamicProperty (Color (Dynamic e _)) = return e
 
 instance IsString Color where
-  fromString = Color . static . pack
+  fromString = Color . static LitText . pack
 
 ------------------------------------------------------
 -- Numbers
@@ -440,19 +450,28 @@ instance Show Number where
   show (Number c) = show (initial c)
 
 instance ToProperty Number where
-  toProperty (Number e) = Property $ pack $ show $ initial e
+  toProperty (Number e) = toProperty (initial e)
 
 instance DynamicProperty Number where
-  toDynamicProperty (Number (Dynamic e _)) = toProperty <$> e
+  toDynamicProperty (Number (Dynamic e _)) = return $ e
+
+instance ToProperty (Number,Number,Number) where
+  toProperty (Number a,Number b,Number c) 
+     = Property $ pack $ unwords $ [ unpack p | Property p <- map (toProperty . initial) [a,b,c] ]
+
+instance DynamicProperty (Number,Number,Number) where
+  toDynamicProperty (Number (Dynamic e1 _),Number (Dynamic e2 _),Number (Dynamic e3 _)) 
+    = return $ Vec3 e1 e2 e3
 
 --      ‘+’, ‘*’, ‘abs’, ‘signum’, and (either ‘negate’ or ‘-’)
 instance Num Number where
+  (Number n1) - (Number n2) = Number (infixOp "-" (-) n1 n2)
   (Number n1) + (Number n2) = Number (infixOp "+" (+) n1 n2)
-  fromInteger = Number . static . fromInteger
+  fromInteger = Number . static LitNumber . fromInteger
 
 instance Fractional Number where
   (Number n1) / (Number n2) = Number (infixOp "/" (/) n1 n2)
-  fromRational = Number . static . fromRational
+  fromRational = Number . static LitNumber . fromRational
 
 ------------------------------------------------------
 -- Selectors
