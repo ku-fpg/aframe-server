@@ -36,6 +36,13 @@ AFRAME.registerComponent('selection-folder', {
    }
 });
 
+AFRAME.registerPrimitive('a-selection-folder',{
+  mappings: {
+    name:  'selection-folder.name',
+    value: 'selection-folder.value'
+  }
+});
+
 AFRAME.registerComponent('color-selector', {
    schema: {
      value: { default: '#FFF', type: 'string' },
