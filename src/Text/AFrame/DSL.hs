@@ -344,7 +344,7 @@ open = attribute "open"
 opacity :: Attributes k => Number -> k ()
 opacity = attribute "opacity"
 
-radius :: Attributes k => Double -> k ()
+radius :: Attributes k => Number -> k ()
 radius = attribute "radius"
 
 repeat_ :: Attributes k => Text -> k ()
@@ -362,7 +362,7 @@ to = attribute "to"
 transparent :: Attributes k => Bool -> k ()
 transparent = attribute "transparent"
 
-width :: Attributes k => Double -> k ()
+width :: Attributes k => Number -> k ()
 width = attribute "width"
 
 ------------------------------------------------------
