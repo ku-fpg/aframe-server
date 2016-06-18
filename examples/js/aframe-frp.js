@@ -18,7 +18,7 @@ function findParentGUI(el) {
 AFRAME.registerComponent('selection-folder', {
    schema: {
      name: { default: 'folder', type: 'string' },
-     open: { default: true, type: 'boolean' }
+     open: { default: false, type: 'boolean' }
    },
    init: function () {
      var g = findParentGUI(this.el);
