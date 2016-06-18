@@ -10,6 +10,7 @@ module Web.AFrame
   , defaultOptions
     -- * The web server
   , aframeStart
+  , aframeServe
     -- * Actors for the AFrameP object
   , fileReader
   , fileWriter
@@ -291,3 +292,12 @@ aframeTrace obj = do
             let ds = deltaAFrame old new 
             print ("diff",ds) -- Diff.compress ds)
             loop new
+
+
+aframeServe :: Options -> AFrame -> IO (AFrameP :~> STM)
+aframeServe opt af = do
+  o <- aframeStart opt af
+  let loop = do
+        threadDelay (1000 * 1000)
+	loop
+  loop
