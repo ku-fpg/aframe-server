@@ -586,6 +586,12 @@ instance EditProperty Number where
           x <- numberSelector "number" x0 range
           fn x
 
+instance EditProperty Color where
+  fn ? c = do
+          x <- colorSelector "color" c
+          fn x
+
+
 ------------------------------------------------------
 -- Macros
 
