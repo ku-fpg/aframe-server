@@ -580,6 +580,13 @@ instance EditProperty (Number,Number,Number) where
           fn (x,y,z)
 
 
+instance EditProperty Number where
+  fn ? (Number x) = do
+          let x0 = initial x
+              range = Nothing
+          x <- numberSelector "number" x0 range
+          fn x
+
 ------------------------------------------------------
 -- Macros
 
