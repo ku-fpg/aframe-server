@@ -47,6 +47,7 @@ module Text.AFrame.DSL
     id_,
     metalness,
     opacity,
+    open,
     radius,
     repeat_,
     roughness,
@@ -336,6 +337,9 @@ id_ = attribute "id"
 
 metalness :: Attributes k => Number -> k ()
 metalness = attribute "metalness"
+
+open :: Attributes k => Bool -> k ()
+open = attribute "open"
 
 opacity :: Attributes k => Number -> k ()
 opacity = attribute "opacity"
