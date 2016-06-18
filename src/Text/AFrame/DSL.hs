@@ -556,8 +556,7 @@ vec3Selector nm (x,y,z) (mx,mn) = do
     return (x,y,z)
 
 class EditProperty p where
-  (?) :: (p -> DSL ()) -> p -> DSL ()
-
+  (?) :: (p -> DSL a) -> p -> DSL a
 
 instance EditProperty (Number,Number,Number) where
   fn ? a@(Number x,Number y,Number z) = do
@@ -566,7 +565,7 @@ instance EditProperty (Number,Number,Number) where
               z0 = initial z
               mx = maximum [x0,y0,z0]
               mn = minimum [x0,y0,z0]
-              (txt,range) = case guessLabel (fn a) of
+              (txt,range) = case guessLabel (pure () <* fn a) of
                        Just lab | lab == "rotation" -> ("rotation", return (min (-180) mn , max 360 mx))
                                 | lab == "scale"    -> ("scale",    return (min (-1) mn   , max 10 mx))
                                 | lab == "position" -> ("position", return (min (-10) mn  , max 10 mx))
