@@ -22,27 +22,35 @@ example = scene $ do
     position (0,1.25,-1)
     radius   1.25
     color    "#EF2D5E"
-    metalness mt
-    opacity	op
-    roughness ro
+--    metalness mt
+--    opacity	op
+--    roughness ro
   box $ do
     attribute "id" ("box" :: Text)
-    position ?(-1,0.5,1) -- xyz 
-    rotation ?(r,45,0)
+    position (-1,0.5,1) -- xyz 
+    rotation (r,45,0)
     width    1
     height   h
     scale   ?(1,1,1)
     color    c
+    attribute "shader" ("noise"::Text)
+--    component "segments" (1::Int)
+
   cylinder $ do
     position (1,0.75+sin(now / 1000),1) 
     radius   0.5
     height   1.5
     color    "#FFC65D"
+    attribute "shader" ("noise"::Text)
+  
   plane $ do
     rotation (-90,0,0)
     width 4
     height 4
     color "#7BC8A4"
+    attribute "shader" ("noise"::Text)
+    component "segments" (10::Int)
+
   sky $ color "#ECECEC"
 --  entity $ template $ src "#x"
 
@@ -58,7 +66,8 @@ main = aframeStart opts $ example
  where opts = defaultOptions 
          { jsFiles = 
               [ "/examples/js/aframe-frp.js"
-              ,"https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"
+              , "/examples/js/aframe-my-test.js"
+              , "https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"
               ] 
          }
          
