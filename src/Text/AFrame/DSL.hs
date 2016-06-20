@@ -82,6 +82,8 @@ module Text.AFrame.DSL
     -- * Variable Types
     Color,
     Number,
+    -- * Unique Property generator
+    uniqId,
     -- * Pretty Printer for DSL
     showAsDSL,
     -- * Others
