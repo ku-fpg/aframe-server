@@ -24,6 +24,8 @@ module Text.AFrame.DSL
     torus,
     video,
     videosphere,
+    -- * Asset DSL
+    img,
     -- * Component DSL
     fog,
     material,
@@ -274,6 +276,12 @@ video = primitiveEntity "a-video"
 
 videosphere :: DSL a -> DSL a
 videosphere = primitiveEntity "a-videosphere"
+
+---------------------------------------------------------------------------------------------------------
+-- Assets
+
+img :: DSL a -> DSL a
+img = primitiveEntity "img"
 
 ---------------------------------------------------------------------------------------------------------
 -- Components
