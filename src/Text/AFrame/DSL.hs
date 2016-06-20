@@ -28,6 +28,7 @@ module Text.AFrame.DSL
     img,
     -- * Component DSL
     fog,
+    look_at,
     material,
     position,
     rotation,
@@ -70,6 +71,7 @@ module Text.AFrame.DSL
     Component,
     component,
     Attributes, 
+    DynamicProperty,
     -- * FRP operators
     colorSelector,
     numberSelector,
@@ -121,7 +123,7 @@ instance DynamicProperty Int
 instance DynamicProperty ()
 instance DynamicProperty (List Attribute ())
 instance DynamicProperty (Double,Double,Double)
-
+instance DynamicProperty Property
 
 ---------------------------------------------------------------------------------
 -- Primitive DSL
@@ -288,6 +290,10 @@ img = primitiveEntity "img"
 
 fog :: Component k => List Attribute () -> k ()
 fog = component "fog"
+
+-- | 'look_at' takes a selector or a vec3.
+look_at :: Component k => Property -> k ()
+look_at = component "look-at"	      -- TODO: revisit this to consider overloading
 
 material :: Component k => List Attribute () -> k ()
 material = component "material"
