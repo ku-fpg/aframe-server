@@ -48,15 +48,19 @@ module Text.AFrame.DSL
     from,
     height,
     id_,
+    lookControlsEnabled,
     metalness,
     opacity,
     open,
     radius,
+    radiusTop,
+    radiusBottom,
     repeat_,
     roughness,
     src,
     to,
     transparent,
+    wasdControlsEnabled,
     width,
     -- * DSL Macros
     fromTo,
@@ -351,6 +355,9 @@ height = attribute "height"
 id_ :: Attributes k => Text -> k ()
 id_ = attribute "id" 
 
+lookControlsEnabled :: Attributes k => Bool -> k ()
+lookControlsEnabled = attribute "lookControlsEnabled" 
+
 metalness :: Attributes k => Number -> k ()
 metalness = attribute "metalness"
 
@@ -362,6 +369,12 @@ opacity = attribute "opacity"
 
 radius :: Attributes k => Number -> k ()
 radius = attribute "radius"
+
+radiusTop :: Attributes k => Number -> k ()
+radiusTop = attribute "radius-top"
+
+radiusBottom :: Attributes k => Number -> k ()
+radiusBottom = attribute "radius-bottom"
 
 repeat_ :: Attributes k => Text -> k ()
 repeat_ = attribute "repeat"
@@ -377,6 +390,9 @@ to = attribute "to"
 
 transparent :: Attributes k => Bool -> k ()
 transparent = attribute "transparent"
+
+wasdControlsEnabled :: Attributes k => Bool -> k ()
+wasdControlsEnabled = attribute "wasdControlsEnabled" 
 
 width :: Attributes k => Number -> k ()
 width = attribute "width"
