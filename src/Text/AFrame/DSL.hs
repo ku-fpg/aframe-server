@@ -548,6 +548,7 @@ instance Fractional Number where
 instance Floating Number where
   pi = Number (prim0 "pi" pi)
   sin (Number n) = Number (prim1 "sin" sin n)
+  cos (Number n) = Number (prim1 "cos" cos n)
 
 
 ------------------------------------------------------
