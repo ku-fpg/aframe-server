@@ -356,7 +356,7 @@ id_ :: Attributes k => Text -> k ()
 id_ = attribute "id" 
 
 lookControlsEnabled :: Attributes k => Bool -> k ()
-lookControlsEnabled = attribute "lookControlsEnabled" 
+lookControlsEnabled = attribute "look-controls-enabled" 
 
 metalness :: Attributes k => Number -> k ()
 metalness = attribute "metalness"
@@ -392,7 +392,7 @@ transparent :: Attributes k => Bool -> k ()
 transparent = attribute "transparent"
 
 wasdControlsEnabled :: Attributes k => Bool -> k ()
-wasdControlsEnabled = attribute "wasdControlsEnabled" 
+wasdControlsEnabled = attribute "wasd-controls-enabled" 
 
 width :: Attributes k => Number -> k ()
 width = attribute "width"
