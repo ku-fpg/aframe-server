@@ -471,11 +471,17 @@ compileExprs :: [(Label,Expr)] -> Property
 compileExprs = Property 
              . T.intercalate "; " 
              . catMaybes
-             . map (\ (Label lbl,e) -> case e of
-                   LitNumber _ -> Nothing
-                   LitText _ -> Nothing
-                   e     -> Just (lbl <> " = " <> compile e))
+             . map (\ (Label lbl,e) -> 
+                   if constant e
+                   then Nothing
+                   else Just (lbl <> " = " <> compile e))
   where
+    constant (LitNumber {})  = True
+    constant (LitText   {})  = True
+    constant (Infix _ e1 e2) = constant e1 && constant e2
+    constant (Vec3 e1 e2 e3) = constant e1 && constant e2 && constant e3
+    constant _               = False
+
     compile (Var uq) = "id('" <> uq <> "')"
     compile (Infix op e1 e2) = "(" <> compile e1 <> op <> compile e2 <> ")"
     compile (LitNumber n) = t
