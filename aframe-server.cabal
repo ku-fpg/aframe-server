@@ -23,6 +23,7 @@ library
   exposed-modules:     Web.AFrame
                  ,     Web.AFrame.GHCi
                  ,     Text.AFrame
+                 ,     Text.AFrame.Geometry
                  ,     Text.AFrame.DSL
   -- other-modules:       
   -- other-extensions:    
