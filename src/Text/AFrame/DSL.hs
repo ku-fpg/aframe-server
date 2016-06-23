@@ -440,6 +440,7 @@ data Expr :: * where
   Infix  :: Text -> Expr -> Expr -> Expr
   Prim0  :: Text                 -> Expr
   Prim1  :: Text -> Expr         -> Expr
+  Prim2  :: Text -> Expr -> Expr -> Expr
   Vec3   :: Expr -> Expr -> Expr -> Expr
   deriving Show
 
@@ -463,6 +464,8 @@ prim0 nm a = Dynamic (Prim0 nm) a
 prim1 :: Text -> (a -> b) -> Dynamic a -> Dynamic b
 prim1 nm f (Dynamic e1 i1) = Dynamic (Prim1 nm e1) (f i1)
 
+prim2 :: Text -> (a -> b -> c ) -> Dynamic a -> Dynamic b -> Dynamic c
+prim2 nm f (Dynamic e1 i1) (Dynamic e2 i2) = Dynamic (Prim2 nm e1 e2) (f i1 i2) 
 
 --functionOp :: Text -> (a -> a -> a) -> Dynamic a -> Dynamic a -> Dynamic a
 --functionOp nm f e1 e2 = Infix nm e1 e2 (f (initial e1) (initial e2))
@@ -479,6 +482,8 @@ compileExprs = Property
     constant (LitNumber {})  = True
     constant (LitText   {})  = True
     constant (Infix _ e1 e2) = constant e1 && constant e2
+    constant (Prim1 _ e1)    = constant e1
+    constant (Prim2 _ e1 e2) = constant e1 && constant e2
     constant (Vec3 e1 e2 e3) = constant e1 && constant e2 && constant e3
     constant _               = False
 
@@ -489,6 +494,7 @@ compileExprs = Property
     compile (LitText txt) = "'" <> txt <> "'"
     compile (Prim0 nm) = nm
     compile (Prim1 nm e1) = nm <> "(" <> compile e1 <> ")"
+    compile (Prim2 nm e1 e2) = nm <> "(" <> compile e1 <> "," <> compile e2 <> ")"
     compile (Vec3 e1 e2 e3) = "vec3(" <> compile e1 <> "," <> compile e2 <> "," <> compile e3 <> ")"
     compile other = error $ "compile: " ++ show other
 
@@ -549,7 +555,8 @@ instance Floating Number where
   pi = Number (prim0 "pi" pi)
   sin (Number n) = Number (prim1 "sin" sin n)
   cos (Number n) = Number (prim1 "cos" cos n)
-
+  sqrt (Number n) = Number (prim1 "sqrt" sqrt n)
+  asin (Number n) = Number (prim1 "asin" asin n)
 
 ------------------------------------------------------
 -- Selectors
