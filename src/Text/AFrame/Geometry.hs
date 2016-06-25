@@ -14,6 +14,8 @@ type Position a    = (a,a,a) -- in units, x,y,z
 
 type Rotation a    = (a,a,a) -- in degrees, x,y,z
 
+type Vector a      = (a,a,a) -- in units, x,y,z
+
 type Normal a      = (a,a,a) -- unit length, x,y,z
 
 type Geographic a  = (a,a)   -- Longitude and Latitude
@@ -63,13 +65,15 @@ rotation order (xd,yd,zd) = Geometry $ case order of
 scale :: Num a => Scale a -> Geometry a
 scale (xd,yd,zd) = Geometry $ \ (x0,y0,z0) -> (xd * x0, yd * y0, zd * z0)
 
-distance :: Floating a => Position a -> Position a -> a
-distance (x0,y0,z0) (x1,y1,z1) = sqrt (x^2 + y^2 + z^2)
-  where (x,y,z) = (x1 - x0,y1 - y0,z1 - z0)
+size :: Floating a => Vector a -> a
+size (x,y,z) = sqrt (x^2 + y^2 + z^2)
+
+to :: Num a => Position a -> Position a -> Vector a
+to (x0,y0,z0) (x1,y1,z1) = (x1 - x0,y1 - y0,z1 - z0)
 
 normalize :: Floating a => Normal a -> Normal a
 normalize (x,y,z) = (x/d,y/d,z/d)
-  where d = distance (0,0,0) (x,y,z)
+  where d = size $ (0,0,0) `to` (x,y,z)
 
 runPosition :: Geometry a -> Position a -> Position a
 runPosition (Geometry f) = f
@@ -102,3 +106,85 @@ instance Arbitrary ANormal where
 
 -}
 ------------------------------------------------------------------------------------------------
+
+-- Depth sorting, where lower z-axis numbers mean behind 
+
+data Surface a = Surface [Position a] -- must have the same normal. Typically a triangle or (aligned) quad.
+
+data Triangle a = Triangle (Position a) (Position a) (Position a) 
+
+data Stacking = Behind | InFront | Disjoint | Indeterminate
+
+comparePlanes :: (Ord a, Floating a) => Surface a -> Surface a -> Stacking
+comparePlanes (Surface as) (Surface bs)
+    -- Is it trivial in the z axis?
+    | minimum [ z | (x,y,z) <- as ] > maximum [ z | (x,y,z) <- bs] = InFront
+    | maximum [ z | (x,y,z) <- as ] < minimum [ z | (x,y,z) <- bs] = Behind
+    -- Are the seperate on the x or y axis?
+    | minimum [ x | (x,y,z) <- as ] > maximum [ x | (x,y,z) <- bs] = Disjoint
+    | maximum [ x | (x,y,z) <- as ] < minimum [ x | (x,y,z) <- bs] = Disjoint
+    | minimum [ y | (x,y,z) <- as ] > maximum [ y | (x,y,z) <- bs] = Disjoint
+    | maximum [ y | (x,y,z) <- as ] < minimum [ y | (x,y,z) <- bs] = Disjoint
+    -- Otherwise, give up
+    | otherwise = Indeterminate
+  where
+    () = ()
+
+--p1 = 
+
+-- Do you intersect (x,y), a plane. If so, where.
+-- Using http://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
+
+eps :: Fractional a => a
+eps = 0.00001
+
+-- takes a triangle, and returns the value along the z-axis from the xy-plane, if any.
+intersect :: (Ord a, Fractional a) => Triangle a -> (a,a) -> Maybe a
+intersect (Triangle p0 p1 p2) (x,y) 
+    | abs det < eps      = Nothing -- interection too thin; we do not do culling.
+    | u < 0 || u > 1     = Nothing 
+    | v < 0 || u + v > 1 = Nothing
+    | otherwise          = Just (-t) -- -ve because the z-axis, -ve is away, and +ve is closer.
+  where
+    dir  = (0,0,-1)
+    orig = (x,y,0)
+      
+    p0p1 = p0 `to` p1
+    p0p2 = p0 `to` p2
+
+    pvec = crossProduct dir p0p2
+    det  = dotProduct p0p1 pvec
+    
+    invDet = 1 / det
+    
+    tvec = p0 `to` orig
+    u = dotProduct tvec pvec * invDet
+
+    qvec = crossProduct tvec p0p1
+    v = dotProduct dir qvec * invDet
+    
+    t = dotProduct p0p2 qvec * invDet
+
+
+draw :: Double -> Char
+draw n | n > 0.5   = '*'
+       | otherwise = last $ show (round n :: Int)
+
+
+splat :: ((Double,Double) -> Maybe Char) -> String
+splat f = unlines 
+        [ [ case f (x,y) of
+              Nothing -> ' '
+              Just c -> c
+          | x <- fmap (*2) $ fmap (/xsz) $ fmap (subtract xsz) $ [0..(xsz*2)]
+          ]
+        | y <- reverse $ fmap (*2) $ fmap (/ysz) $ fmap (subtract ysz) $ [0..(ysz*2)]
+        ]
+ where
+    xsz = 50
+    ysz = 10
+
+test = putStrLn $ splat $ fmap (fmap draw) $ intersect t1
+
+t1 :: Triangle Double
+t1 = Triangle (-1.2,1,-5) (1,1,5) (0,-2,-2)
