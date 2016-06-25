@@ -1,12 +1,8 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GADTs, ScopedTypeVariables #-}
 module Text.AFrame.Geometry where
 
 import Control.Monad  
 import Data.Monoid ((<>))
-
--- QC
-import Test.QuickCheck
-import Data.Int
 
 -- A-Frame uses a right-handed coordinate system. 
 -- When aligning our right hand’s thumb with a positive axis,
@@ -37,7 +33,6 @@ position (xd,yd,zd) = Geometry $ \ (x,y,z) -> (x + xd,y + yd,z + zd)
 
 -- From aframe/src/components/rotation.js, 
 --   object3D.rotation.order = 'YXZ';
--- So we need to do Z, then X, then Y. apparently.
 --
 -- Rotations are performed with respect to the object's internal coordinate system -- not the world coordinate system. 
 -- This is important. So, for example, after the x-rotation occurs, the object's y- and z- axes will generally no 
@@ -52,7 +47,9 @@ position (xd,yd,zd) = Geometry $ \ (x,y,z) -> (x + xd,y + yd,z + zd)
 
 rotation :: Floating a => Order -> Rotation a -> Geometry a
 rotation order (xd,yd,zd) = Geometry $ case order of
-      YXZ -> rotY . rotX . rotZ -- This seems reversed to me, but the test(s) work.
+      YXZ -> rotY . rotX . rotZ 
+       -- This seems reversed to me, but the test(s) work. 
+       -- I think its something to do with intrinsic vs extrinsic rotations.
   where
    rotX (x,y,z) = (x, y',z') where (y',z') = rot xd    (y,z)
    rotY (x,y,z) = (x',y ,z') where (x',z') = rot (-yd) (x,z)
@@ -68,7 +65,7 @@ scale (xd,yd,zd) = Geometry $ \ (x0,y0,z0) -> (xd * x0, yd * y0, zd * z0)
 
 distance :: Floating a => Position a -> Position a -> a
 distance (x0,y0,z0) (x1,y1,z1) = sqrt (x^2 + y^2 + z^2)
-  where (x,y,z) = (x1 - x0,y1 - y0,z1-z0)
+  where (x,y,z) = (x1 - x0,y1 - y0,z1 - z0)
 
 normalize :: Floating a => Normal a -> Normal a
 normalize (x,y,z) = (x/d,y/d,z/d)
@@ -80,43 +77,28 @@ runPosition (Geometry f) = f
 runNormal :: Floating a => Geometry a -> Normal a -> Normal a
 runNormal g = normalize . runPosition (position (-x,-y,-z) <> g)
   where (x,y,z) = runPosition g (0,0,0)
-    
+
+crossProduct :: Num a => Normal a -> Normal a -> Normal a
+crossProduct (bx,by,bz) (cx,cy,cz) = (ax,ay,az)
+  where
+      ax = by * cz - bz * cy
+      ay = bz * cx - bx * cz
+      az = bx * cy - by * cx
+
+dotProduct :: Num a => Normal a -> Normal a -> a
+dotProduct (bx,by,bz) (cx,cy,cz) = bx*cx + by*cy + bz*cz
+
+
 {-
-vectorDirection :: RealFloat a => XYZ -> Position a -> Position a -> Rotation a
-vectorDirection xyz (x0,y0,z0) (x1,y1,z1)
-  | r == 0    = (0,0,0)
-  | otherwise = (0,t,u)
- where
-   x' = x1 - x0
-   y' = y1 - y0
-   z' = z1 - z0
-   (x,y,z) = (x',y',z')
-   r = sqrt (x^2 + y^2 + z^2)
-   t = (180/pi) * asin (z / r)            -- polar angle, "latitude", 0 .. pi/2
-   u = (180/pi) * atan2 y x               -- azimuth angle, "longiture", -pi .. pi
-      
-   
-test :: (Double,Double,Double) -> String
-test p = show (p,r',p')
-  where
-  r' = vectorDirection XYZ (0,0,0) p
-  p' = run (rotation r') (1,0,0)
 
-prop = do
-  x <- [-1,0,1]    
---  y <- [0]
---  z <- [0]
-  y <- [-1,0,1]    
-  z <- [-1,0,1]    
-  [ test (x,y,z) | x /= 0 || y /= 0 || z /= 0 ]
-    
+prop_normalRotation (ANormal p1) (ANormal p2) = runPosition (rotation YXZ $ normalRotation p1 p2) p1 == p2
+
+newtype ANormal = ANormal (Normal Double) deriving Show
+
+instance Arbitrary ANormal where
+  arbitrary = do (x,y,z) <- arbitrary
+                 return $ ANormal $ runNormal (rotation YXZ (x,y,z)) $ (0,0,1)
+
+
 -}
-
---- prop_runNormal_1 (x,y,z) = runNormal (
-
-
-prop_1 (x :: Int8) = distance n0 n1 < 0.0001
-  where
-    x' = 180 * fromIntegral x
-    n0 = (0,0,1::Double)
-    n1 = runNormal (rotation YXZ (x',0,0)) n0
+------------------------------------------------------------------------------------------------
