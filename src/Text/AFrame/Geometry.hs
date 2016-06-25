@@ -1,6 +1,13 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Text.AFrame.Geometry where
 
 import Control.Monad  
+import Data.Monoid ((<>))
+
+-- QC
+import Test.QuickCheck
+import Data.Int
+
 -- A-Frame uses a right-handed coordinate system. 
 -- When aligning our right hand’s thumb with a positive axis,
 -- our hand will curl in the positive direction of rotation.
@@ -31,28 +38,49 @@ position (xd,yd,zd) = Geometry $ \ (x,y,z) -> (x + xd,y + yd,z + zd)
 -- From aframe/src/components/rotation.js, 
 --   object3D.rotation.order = 'YXZ';
 -- So we need to do Z, then X, then Y. apparently.
-rotation :: Floating a => Rotation a -> Geometry a
-rotation (xd,yd,zd) = Geometry $ \ (x0,y0,z0) -> 
-    let (z1,(x1,y1)) = (z0,rot zd (x0,y0))
-        (x2,(y2,z2)) = (x1,rot xd (y1,z1))
-        (y3,(x3,z3)) = (y2,rot' yd (x2,z2))
-    in  (x3,y3,z3)
+--
+-- Rotations are performed with respect to the object's internal coordinate system -- not the world coordinate system. 
+-- This is important. So, for example, after the x-rotation occurs, the object's y- and z- axes will generally no 
+-- longer be aligned with the world axes. Rotations specified in this way are not unique.
+--
+-- From http://stackoverflow.com/questions/14774633/how-to-rotate-an-object-and-reset-its-rotation-to-zero/14776900#14776900
+-- For more information about Euler angles, see the Wikipedia article <https://en.wikipedia.org/wiki/Euler_angles>
+-- Three.js follows the Tait–Bryan convention, as explained in the article.
+
+-- Quote: .. about the axes of the rotating coordinate system, 
+-- which changes its orientation after each elemental rotation (intrinsic rotations).
+
+rotation :: Floating a => Order -> Rotation a -> Geometry a
+rotation order (xd,yd,zd) = Geometry $ case order of
+      YXZ -> rotY . rotX . rotZ -- This seems reversed to me, but the test(s) work.
   where
+   rotX (x,y,z) = (x, y',z') where (y',z') = rot xd    (y,z)
+   rotY (x,y,z) = (x',y ,z') where (x',z') = rot (-yd) (x,z)
+   rotZ (x,y,z) = (x',y',z ) where (x',y') = rot zd    (x,y)
+
    rot d (x,y) = ( x * cos r - y * sin r
                  , x * sin r + y * cos r
-                 )
-     where r = d / 180 * pi
-
-   rot' d (x,y) =( x * cos r + y * sin r
-                 , -(x * sin r) + y * cos r
                  )
      where r = d / 180 * pi
 
 scale :: Num a => Scale a -> Geometry a
 scale (xd,yd,zd) = Geometry $ \ (x0,y0,z0) -> (xd * x0, yd * y0, zd * z0)
 
-run :: Geometry a -> (a,a,a) -> (a,a,a)
-run (Geometry f) = f
+distance :: Floating a => Position a -> Position a -> a
+distance (x0,y0,z0) (x1,y1,z1) = sqrt (x^2 + y^2 + z^2)
+  where (x,y,z) = (x1 - x0,y1 - y0,z1-z0)
+
+normalize :: Floating a => Normal a -> Normal a
+normalize (x,y,z) = (x/d,y/d,z/d)
+  where d = distance (0,0,0) (x,y,z)
+
+runPosition :: Geometry a -> Position a -> Position a
+runPosition (Geometry f) = f
+
+runNormal :: Floating a => Geometry a -> Normal a -> Normal a
+runNormal g = normalize . runPosition (position (-x,-y,-z) <> g)
+  where (x,y,z) = runPosition g (0,0,0)
+    
 {-
 vectorDirection :: RealFloat a => XYZ -> Position a -> Position a -> Rotation a
 vectorDirection xyz (x0,y0,z0) (x1,y1,z1)
@@ -83,3 +111,12 @@ prop = do
   [ test (x,y,z) | x /= 0 || y /= 0 || z /= 0 ]
     
 -}
+
+--- prop_runNormal_1 (x,y,z) = runNormal (
+
+
+prop_1 (x :: Int8) = distance n0 n1 < 0.0001
+  where
+    x' = 180 * fromIntegral x
+    n0 = (0,0,1::Double)
+    n1 = runNormal (rotation YXZ (x',0,0)) n0

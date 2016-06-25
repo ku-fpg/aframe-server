@@ -42,6 +42,7 @@ library
                ,       taggy
                ,       containers
                ,       unordered-containers
+               ,       QuickCheck == 2.8.*
                ,       microlens == 0.4.4.0
   other-modules:      Paths_aframe_server
   GHC-options: -Wall -threaded
