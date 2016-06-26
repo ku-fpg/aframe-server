@@ -20,10 +20,12 @@ type Position a    = (a,a,a) -- in units, x,y,z
 
 type Rotation a    = (a,a,a) -- in degrees, x,y,z
 
-type Vector a      = (a,a,a) -- in units, x,y,z
+newtype Vector a   = Vector (a,a,a) -- in units, x,y,z
+        deriving Show
 
-type Normal a      = (a,a,a) -- unit length, x,y,z
-
+newtype Normal a   = Normal (a,a,a) -- unit length, x,y,z
+        deriving Show
+        
 type Scale a       = (a,a,a) -- ratio, x,y,z
 
 data Order = XYZ | XZY | YXZ | YZX | ZXY | ZYX
@@ -70,31 +72,32 @@ scale :: Num a => Scale a -> Geometry a
 scale (xd,yd,zd) = Geometry $ \ (x0,y0,z0) -> (xd * x0, yd * y0, zd * z0)
 
 size :: Floating a => Vector a -> a
-size (x,y,z) = sqrt (x^2 + y^2 + z^2)
+size (Vector (x,y,z)) = sqrt (x^2 + y^2 + z^2)
 
 to :: Num a => Position a -> Position a -> Vector a
-to (x0,y0,z0) (x1,y1,z1) = (x1 - x0,y1 - y0,z1 - z0)
+to (x0,y0,z0) (x1,y1,z1) = Vector (x1 - x0,y1 - y0,z1 - z0)
 
-normalize :: Floating a => Normal a -> Normal a
-normalize (x,y,z) = (x/d,y/d,z/d)
+normalize :: Floating a => Vector a -> Normal a
+normalize (Vector (x,y,z)) = (Normal (x/d,y/d,z/d))
   where d = size $ (0,0,0) `to` (x,y,z)
+
 
 runPosition :: Geometry a -> Position a -> Position a
 runPosition (Geometry f) = f
 
 runNormal :: Floating a => Geometry a -> Normal a -> Normal a
-runNormal g = normalize . runPosition (position (-x,-y,-z) <> g)
+runNormal g (Normal p) = normalize $ Vector $ runPosition (position (-x,-y,-z) <> g) $ p
   where (x,y,z) = runPosition g (0,0,0)
   
-crossProduct :: Num a => Normal a -> Normal a -> Normal a
-crossProduct (bx,by,bz) (cx,cy,cz) = (ax,ay,az)
+crossProduct :: Num a => Vector a -> Vector a -> Vector a
+crossProduct (Vector (bx,by,bz)) (Vector (cx,cy,cz)) = Vector (ax,ay,az)
   where
       ax = by * cz - bz * cy
       ay = bz * cx - bx * cz
       az = bx * cy - by * cx
 
-dotProduct :: Num a => Normal a -> Normal a -> a
-dotProduct (bx,by,bz) (cx,cy,cz) = bx*cx + by*cy + bz*cz
+dotProduct :: Num a => Vector a -> Vector a -> a
+dotProduct (Vector (bx,by,bz)) (Vector (cx,cy,cz)) = bx*cx + by*cy + bz*cz
 
 
 ------------------------------------------------------------------------------------------------
@@ -133,9 +136,9 @@ data Stacking = Behind | InFront | Disjoint | Indeterminate
 -- Figure out how to rotate from the first normal to the second normal.
 normalRotation :: (RealFloat a, Show a) => Normal a -> Normal a -> Geometry a
 normalRotation p0 p1 | traceShow ("nr",p0,p1) False = undefined
-normalRotation (x0,y0,z0) (x1,y1,z1) = trace msg $ rotation YXZ (0,-(b0+b1),-(a0+a1))
+normalRotation (Normal (x0,y0,z0)) (Normal (x1,y1,z1)) = trace msg $ rotation YXZ (0,-(b0+b1),-(a0+a1))
   where
-    
+            
     tr s x = traceShow (s,x) x
 
     msg = show [("a0",a0),("a1",a1),("b0",b0),("b1",b1)]
@@ -149,26 +152,15 @@ normalRotation (x0,y0,z0) (x1,y1,z1) = trace msg $ rotation YXZ (0,-(b0+b1),-(a0
 
 -- flattenPolygon, by translation and rotation, to the xy axis plane.
 flattenPolygon :: (Show a, Polygon p, RealFloat a) => p a -> Geometry a
-flattenPolygon ps = normalRotation (normalize $ crossProduct p0p1 p0p2) (0,0,1)
+flattenPolygon ps = normalRotation (normalize $ crossProduct p0p1 p0p2) (Normal (0,0,1))
                  <> position (-x0*1,-y0*1,-z0)
   where 
     (p0@(x0,y0,z0):p1@(x1,y1,z1):p2@(x2,y2,z2):_) = path ps
     p0p1 = p0 `to` p1
     p0p2 = p0 `to` p2
-{-
-    tr s x = traceShow (s,x) x
-
-    (x,y,z) = tr "x,y,z" $ normalize $ crossProduct p0p1 p0p2
-    
-    z' = sqrt (x^2 + y^2)
-
-    t = tr "t" $ (180/pi) * asin z'        -- polar angle, "latitude", 0 .. pi/2
-    u = tr "u" $ (180/pi) * atan2 y x     -- azimuth angle, "longiture", -pi .. pi
--}
       
-{-
-comparePolygon :: (Ord a, Floating a) => Quad a -> Quad a -> Stacking
-comparePolygon (Quad as) (Surface bs)
+comparePolygon :: (Show a, Ord a, RealFloat a,Polygon p) => p a -> p a -> Stacking
+comparePolygon pa pb
     -- Is it trivial in the z axis?
     | minimum [ z | (x,y,z) <- as ] > maximum [ z | (x,y,z) <- bs] = InFront
     | maximum [ z | (x,y,z) <- as ] < minimum [ z | (x,y,z) <- bs] = Behind
@@ -178,10 +170,18 @@ comparePolygon (Quad as) (Surface bs)
     | minimum [ y | (x,y,z) <- as ] > maximum [ y | (x,y,z) <- bs] = Disjoint
     | maximum [ y | (x,y,z) <- as ] < minimum [ y | (x,y,z) <- bs] = Disjoint
     -- Otherwise, give up
+
     | otherwise = Indeterminate
+
   where
+
+    as = path pa
+    bs = path pb
+
+    flat_as = flattenPolygon pa
+    flat_bs = flattenPolygon pb
+
     () = ()
--}
 
 -- Do you intersect (x,y), a plane. If so, where.
 -- Using http://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
@@ -201,7 +201,7 @@ intersectTriangle (Triangle p0 p1 p2) (x,y)
     | v < 0 || u + v > 1 = Nothing
     | otherwise          = Just (-t) -- -ve because the z-axis, -ve is away, and +ve is closer.
   where
-    dir  = (0,0,-1)
+    dir  = Vector (0,0,-1)
     orig = (x,y,0)
       
     p0p1 = p0 `to` p1
@@ -267,3 +267,11 @@ test4 n = putStrLn $ splat $ fmap (fmap draw) $ intersectQuad $ quad'
     quad = mapPosition (runPosition (position (0,0,0) <> rotation YXZ (n,10,-10)))
           $ plane 2 2
   
+  
+test5 = comparePolygon q1 q2
+  where        
+    q1 = mapPosition (runPosition (position (0,0,0) <> rotation YXZ (80,10,-10)))
+       $ plane 2 2
+
+    q2 = mapPosition (runPosition (position (5,5,0) <> rotation YXZ (80,10,-10)))
+       $ plane 2 2
