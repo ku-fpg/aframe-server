@@ -16,11 +16,9 @@ import Debug.Trace
 -- When using Geometry, use (position p <> G.rotation YXZ r <>  scale s)
 -- aka scale, then rotate, then position.
 
-newtype Geometry a = Geometry (Position' a -> Position' a)
+newtype Geometry a = Geometry (Position a -> Position a)
 
-type Position a    = (a,a,a) -- in units, x,y,z
-
-newtype Position' a  = Position (a,a,a) -- in units, x,y,z
+newtype Position a  = Position (a,a,a) -- in units, x,y,z
         deriving Show
 
 newtype Rotation a = Rotation (a,a,a) -- in degrees, x,y,z
@@ -50,11 +48,11 @@ instance Monoid (Geometry a) where
 --instance Geometric (Position a) where
 --  run (Geometry f) = f
 
-run :: Geometry a -> Position' a -> Position' a
+run :: Geometry a -> Position a -> Position a
 run (Geometry f) = f
 
-runPosition :: Geometry a -> Position a -> Position a
-runPosition (Geometry f) p = let Position p' = f (Position p) in p'
+--runPosition :: Geometry a -> Position a -> Position a
+--runPosition (Geometry f) p = let Position p' = f (Position p) in p'
 
 position :: Num a => (a,a,a) -> Geometry a
 position (xd,yd,zd) = Geometry $ \ (Position (x,y,z)) -> Position (x + xd,y + yd,z + zd)
@@ -110,7 +108,7 @@ perspective = Geometry $ \ (Position (x,y,z)) -> Position (x/(-z),y/(-z),z)
 size :: Floating a => Vector a -> a
 size (Vector (x,y,z)) = sqrt (x^2 + y^2 + z^2)
 
-to :: Num a => Position' a -> Position' a -> Vector a
+to :: Num a => Position a -> Position a -> Vector a
 to (Position (x0,y0,z0)) (Position (x1,y1,z1)) = Vector (x1 - x0,y1 - y0,z1 - z0)
 
 normalize :: Floating a => Vector a -> Normal a
@@ -134,7 +132,7 @@ dotProduct (Vector (bx,by,bz)) (Vector (cx,cy,cz)) = bx*cx + by*cy + bz*cz
 
 ------------------------------------------------------------------------------------------------
 class Polygon p where
-  path  :: p a -> [Position' a]
+  path  :: p a -> [Position a]
   mapPosition :: Geometry a -> p a -> p a       -- replace with superclass
 
 -- Assumes a planer convext polygon. Like a Triangle or Quad.
@@ -146,7 +144,7 @@ tessellation ps =
 
 
 -- Depth sorting, where lower z-axis numbers mean behind 
-data Quad a = Quad (Position' a) (Position' a) (Position' a) (Position' a)
+data Quad a = Quad (Position a) (Position a) (Position a) (Position a)
   deriving Show
    -- must have the same normal.
 
@@ -157,7 +155,7 @@ instance Polygon Quad where
                                           (run f p2)
                                           (run f p3)
 
-data Triangle a = Triangle (Position' a) (Position' a) (Position' a) 
+data Triangle a = Triangle (Position a) (Position a) (Position a) 
   deriving Show
 
 instance Polygon Triangle where
