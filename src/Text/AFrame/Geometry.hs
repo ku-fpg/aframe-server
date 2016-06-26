@@ -7,6 +7,8 @@ import Control.Applicative ((<|>))
 
 import Debug.Trace
 
+--------------------------------------------------------------------------------------------------------
+
 -- A-Frame uses a right-handed coordinate system. 
 -- When aligning our right hand’s thumb with a positive axis,
 -- our hand will curl in the positive direction of rotation.
@@ -34,6 +36,20 @@ instance Monoid (Geometry a) where
   mempty = Geometry id
   Geometry f `mappend` Geometry g = Geometry (f . g)
 
+--class Geometric g where
+--  run :: Geometry a -> g a -> g a
+
+--------------------------------------------------------------------------------------------------------
+-- The three 'Geometry' generators,  a 'perspective' modifier, and the class instance for Geometric.
+
+--instance Geometric (Position a) where
+--  run (Geometry f) = f
+
+run = runPosition
+
+runPosition :: Geometry a -> Position a -> Position a
+runPosition (Geometry f) = f
+
 position :: Num a => Position a -> Geometry a
 position (xd,yd,zd) = Geometry $ \ (x,y,z) -> (x + xd,y + yd,z + zd)
 
@@ -56,8 +72,11 @@ position (xd,yd,zd) = Geometry $ \ (x,y,z) -> (x + xd,y + yd,z + zd)
 rotation :: Floating a => Order -> Rotation a -> Geometry a
 rotation order (xd,yd,zd) = Geometry $ case order of
       YXZ -> rotY . rotX . rotZ 
-       -- This seems reversed to me, but the test(s) work. 
-       -- I think its something to do with intrinsic vs extrinsic rotations.
+       -- This seems reversed to me, this is because
+       -- aframe/THREE uses intrinsic, and have extrinsic rotations.
+       -- any intrinsic rotation can be converted to its extrinsic
+       -- equivalent and vice-versa by reversing the order of elemental rotations.
+       -- From: http://danceswithcode.net/engineeringnotes/rotations_in_3d/rotations_in_3d_part1.html
   where
    rotX (x,y,z) = (x, y',z') where (y',z') = rot xd    (y,z)
    rotY (x,y,z) = (x',y ,z') where (x',z') = rot (-yd) (x,z)
@@ -71,6 +90,14 @@ rotation order (xd,yd,zd) = Geometry $ case order of
 scale :: Num a => Scale a -> Geometry a
 scale (xd,yd,zd) = Geometry $ \ (x0,y0,z0) -> (xd * x0, yd * y0, zd * z0)
 
+
+-- assuming we are looking at the -ve side of the z axis.
+perspective :: Fractional a => Geometry a
+perspective = Geometry $ \ (x,y,z) -> (x/(-z),y/(-z),z)
+
+--------------------------------------------------------------------------------------------------------
+-- Misc linear alg. operators
+
 size :: Floating a => Vector a -> a
 size (Vector (x,y,z)) = sqrt (x^2 + y^2 + z^2)
 
@@ -82,12 +109,9 @@ normalize (Vector (x,y,z)) = (Normal (x/d,y/d,z/d))
   where d = size $ (0,0,0) `to` (x,y,z)
 
 
-runPosition :: Geometry a -> Position a -> Position a
-runPosition (Geometry f) = f
-
 runNormal :: Floating a => Geometry a -> Normal a -> Normal a
-runNormal g (Normal p) = normalize $ Vector $ runPosition (position (-x,-y,-z) <> g) $ p
-  where (x,y,z) = runPosition g (0,0,0)
+runNormal g (Normal p) = normalize $ Vector $ run (position (-x,-y,-z) <> g) $ p
+  where (x,y,z) = run g (0,0,0)
   
 crossProduct :: Num a => Vector a -> Vector a -> Vector a
 crossProduct (Vector (bx,by,bz)) (Vector (cx,cy,cz)) = Vector (ax,ay,az)
@@ -98,7 +122,6 @@ crossProduct (Vector (bx,by,bz)) (Vector (cx,cy,cz)) = Vector (ax,ay,az)
 
 dotProduct :: Num a => Vector a -> Vector a -> a
 dotProduct (Vector (bx,by,bz)) (Vector (cx,cy,cz)) = bx*cx + by*cy + bz*cz
-
 
 ------------------------------------------------------------------------------------------------
 
@@ -169,8 +192,8 @@ comparePolygon pa pb
     | maximum [ x | (x,y,z) <- as ] < minimum [ x | (x,y,z) <- bs] = Disjoint
     | minimum [ y | (x,y,z) <- as ] > maximum [ y | (x,y,z) <- bs] = Disjoint
     | maximum [ y | (x,y,z) <- as ] < minimum [ y | (x,y,z) <- bs] = Disjoint
-    -- Otherwise, give up
 
+    -- Otherwise, give up
     | otherwise = Indeterminate
 
   where
@@ -220,6 +243,8 @@ intersectTriangle (Triangle p0 p1 p2) (x,y)
     
     t = dotProduct p0p2 qvec * invDet
 
+------------------------------------------------------------------------------------
+-- Testing
 
 draw :: Double -> Char
 draw n | n > 1.5 = '#'
@@ -248,7 +273,7 @@ t1 = Triangle (0,-2,-2) (1,1,5)  (-1.2,1,-5)
 test2 = putStrLn $ splat $ fmap (fmap draw) $ intersectQuad q1
 
 test3 = putStrLn $ splat $ fmap (fmap draw) $ intersectQuad 
-   $ mapPosition (runPosition (perspective <> position (0,0,-2) <> rotation YXZ (-70,0,0)))
+   $ mapPosition (run (perspective <> position (0,0,-2) <> rotation YXZ (-70,0,0)))
    $ plane 2 2
 
 q1 :: Quad Double
@@ -257,21 +282,18 @@ q1 = Quad (-1,-1,-1) (1,-1,-1) (1,1,-1) (-1,1,-4)
 plane :: Fractional a => a -> a -> Quad a
 plane w h = Quad (-w/2,h/2,0) (-w/2,-h/2,0) (w/2,-h/2,0) (w/2,h/2,0) 
 
-perspective :: Fractional a => Geometry a
-perspective = Geometry $ \ (x,y,z) -> (x/(-z),y/(-z),z)
-
 test4 n = putStrLn $ splat $ fmap (fmap draw) $ intersectQuad $ quad'
   where
-    quad' = mapPosition (runPosition (flattenPolygon quad)) quad
+    quad' = mapPosition (run (flattenPolygon quad)) quad
 
-    quad = mapPosition (runPosition (position (0,0,0) <> rotation YXZ (n,10,-10)))
+    quad = mapPosition (run (position (0,0,0) <> rotation YXZ (n,10,-10)))
           $ plane 2 2
   
   
 test5 = comparePolygon q1 q2
   where        
-    q1 = mapPosition (runPosition (position (0,0,0) <> rotation YXZ (80,10,-10)))
+    q1 = mapPosition (run (position (0,0,0) <> rotation YXZ (80,10,-10)))
        $ plane 2 2
 
-    q2 = mapPosition (runPosition (position (5,5,0) <> rotation YXZ (80,10,-10)))
+    q2 = mapPosition (run (position (5,5,0) <> rotation YXZ (80,10,-10)))
        $ plane 2 2
