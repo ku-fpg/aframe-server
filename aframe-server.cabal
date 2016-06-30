@@ -70,3 +70,15 @@ executable dsl-example
   -- -Wall
   default-language:    Haskell2010
 
+executable qc-test
+  main-is:             QC.hs
+  hs-source-dirs:      .
+  build-depends:       base >=4.8 && <4.9
+               ,       aframe-server == 0.1.0.0
+               ,       text == 1.2.*
+               ,       microlens == 0.4.4.0
+  -- hs-source-dirs:      
+--  GHC-options:         -threaded 
+  -- -Wall
+  default-language:    Haskell2010
+

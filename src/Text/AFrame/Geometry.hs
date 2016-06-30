@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, ScopedTypeVariables #-}
+{-# LANGUAGE GADTs, ScopedTypeVariables, InstanceSigs #-}
 module Text.AFrame.Geometry where
 
 import Control.Monad  
@@ -6,6 +6,7 @@ import Data.Monoid ((<>))
 import Control.Applicative ((<|>))
 
 import Debug.Trace
+import Test.QuickCheck
 
 --------------------------------------------------------------------------------------------------------
 
@@ -24,7 +25,7 @@ newtype Position a  = Position (a,a,a) -- in units, x,y,z
 newtype Rotation a = Rotation (a,a,a) -- in degrees, x,y,z
         deriving Show
 
-newtype Vector a   = Vector (a,a,a) -- in units, x,y,z
+newtype Vector a = Vector (a,a,a) -- in units, x,y,z
         deriving Show
 
 newtype Normal a   = Normal (a,a,a) -- unit length, x,y,z
@@ -35,24 +36,32 @@ newtype Scale a    = Scale (a,a,a) -- ratio, x,y,z
 
 data Order = XYZ | XZY | YXZ | YZX | ZXY | ZYX
 
+instance Num a => Num (Vector a) where
+  Vector (x0,y0,z0) + Vector (x1,y1,z1) = Vector (x0+x1,y0+y1,z0+z1)
+  Vector (x0,y0,z0) - Vector (x1,y1,z1) = Vector (x0-x1,y0-y1,z0-z1)
+  Vector (x0,y0,z0) * Vector (x1,y1,z1) = Vector (x0*x1,y0*y1,z0*z1)
+  negate (Vector (x0,y0,z0)) = Vector (negate x0,negate y0,negate z0)
+  abs = error "abs not defined"
+  signum = error "signum not defined"
+  fromInteger n = Vector (fromInteger n,fromInteger n,fromInteger n)
+
+instance Foldable Vector where
+  foldr f z (Vector (a,b,c)) = f a (f b (f c z))
+
+
 instance Monoid (Geometry a) where
   mempty = Geometry id
   Geometry f `mappend` Geometry g = Geometry (f . g)
 
---class Geometric g where
---  run :: Geometry a -> g a -> g a
+-- Not sure about the Floating here. Feel that it can be embeded inside Geometry, for example.
+class Geometric g where
+  run :: Floating a => Geometry a -> g a -> g a
+
+class Geometric p => Polygon p where
+  path  :: p a -> [Position a]
 
 --------------------------------------------------------------------------------------------------------
--- The three 'Geometry' generators,  a 'perspective' modifier, and the class instance for Geometric.
-
---instance Geometric (Position a) where
---  run (Geometry f) = f
-
-run :: Geometry a -> Position a -> Position a
-run (Geometry f) = f
-
---runPosition :: Geometry a -> Position a -> Position a
---runPosition (Geometry f) p = let Position p' = f (Position p) in p'
+-- The three 'Geometry' generators,  a 'perspective' modifier,
 
 position :: Num a => (a,a,a) -> Geometry a
 position (xd,yd,zd) = Geometry $ \ (Position (x,y,z)) -> Position (x + xd,y + yd,z + zd)
@@ -97,13 +106,39 @@ rotation order (xd,yd,zd) = Geometry $ runPosition $ case order of
 scale :: Num a => (a,a,a) -> Geometry a
 scale (xd,yd,zd) = Geometry $ \ (Position (x0,y0,z0)) -> Position (xd * x0, yd * y0, zd * z0)
 
-
 -- assuming we are looking at the -ve side of the z axis.
 perspective :: Fractional a => Geometry a
 perspective = Geometry $ \ (Position (x,y,z)) -> Position (x/(-z),y/(-z),z)
 
 --------------------------------------------------------------------------------------------------------
+--  The class instances for Geometric.
+
+instance Geometric Position where
+  run :: Geometry a -> Position a -> Position a
+  run (Geometry f) = f
+
+instance Geometric Vector where
+--  run :: Floating a => Geometry a -> Vector a -> Vector a
+  run g (Vector p) = Vector $ p'
+    where Position (x,y,z) = run                         g  $ origin
+          Position p'      = run (position (-x,-y,-z) <> g) $ Position p
+
+instance Geometric Normal where
+  run :: Floating a => Geometry a -> Normal a -> Normal a
+  run g (Normal p) = normalize $ run g $ Vector p
+
+{-
+runNormal :: Floating a => Geometry a -> Normal a -> Normal a
+runNormal g (Normal p) = normalize $ Vector $ p'
+  where Position (x,y,z) = run                         g  $ Position (0,0,0)
+        Position p'      = run (position (-x,-y,-z) <> g) $ Position p
+-}
+
+--------------------------------------------------------------------------------------------------------
 -- Misc linear alg. operators
+
+origin :: Num a => Position a
+origin = Position (0,0,0)
 
 size :: Floating a => Vector a -> a
 size (Vector (x,y,z)) = sqrt (x^2 + y^2 + z^2)
@@ -115,11 +150,6 @@ normalize :: Floating a => Vector a -> Normal a
 normalize (Vector (x,y,z)) = (Normal (x/d,y/d,z/d))
   where d = size $ Position (0,0,0) `to` Position (x,y,z)
 
-runNormal :: Floating a => Geometry a -> Normal a -> Normal a
-runNormal g (Normal p) = normalize $ Vector $ p'
-  where Position (x,y,z) = run                         g  $ Position (0,0,0)
-        Position p'      = run (position (-x,-y,-z) <> g) $ Position p
-  
 crossProduct :: Num a => Vector a -> Vector a -> Vector a
 crossProduct (Vector (bx,by,bz)) (Vector (cx,cy,cz)) = Vector (ax,ay,az)
   where
@@ -131,36 +161,30 @@ dotProduct :: Num a => Vector a -> Vector a -> a
 dotProduct (Vector (bx,by,bz)) (Vector (cx,cy,cz)) = bx*cx + by*cy + bz*cz
 
 ------------------------------------------------------------------------------------------------
-class Polygon p where
-  path  :: p a -> [Position a]
-  mapPosition :: Geometry a -> p a -> p a       -- replace with superclass
-
--- Assumes a planer convext polygon. Like a Triangle or Quad.
-tessellation :: Polygon p => p a -> [Triangle a]
-tessellation ps = 
-        [ Triangle p1 p2 p3 
-        | (p1:p2:p3:_) <- take (length (path ps) - 2) $ cycle $ iterate tail $ path $ ps 
-        ]
-
 
 -- Depth sorting, where lower z-axis numbers mean behind 
 data Quad a = Quad (Position a) (Position a) (Position a) (Position a)
   deriving Show
    -- must have the same normal.
 
+instance Geometric Quad where
+  run f (Quad p0 p1 p2 p3) = Quad (run f p0) 
+                                  (run f p1)
+                                  (run f p2)
+                                  (run f p3)
+        
+
 instance Polygon Quad where
   path (Quad p0 p1 p2 p3) = [p0,p1,p2,p3]
-  mapPosition f (Quad p0 p1 p2 p3) = Quad (run f p0) 
-                                          (run f p1)
-                                          (run f p2)
-                                          (run f p3)
 
 data Triangle a = Triangle (Position a) (Position a) (Position a) 
   deriving Show
 
 instance Polygon Triangle where
   path (Triangle p0 p1 p2) = [p0,p1,p2]
-  mapPosition f (Triangle p1 p2 p3) = Triangle (run f p1) (run f p2) (run f p3)
+
+instance Geometric Triangle where
+  run f (Triangle p1 p2 p3) = Triangle (run f p1) (run f p2) (run f p3)
   
 data Stacking = Behind | InFront | Disjoint | Indeterminate
   deriving (Show,Eq)
@@ -168,33 +192,20 @@ data Stacking = Behind | InFront | Disjoint | Indeterminate
 
 -- Figure out how to rotate from the first normal to the second normal.
 normalRotation :: (RealFloat a, Show a) => Normal a -> Normal a -> Geometry a
-normalRotation p0 p1 | traceShow ("nr",p0,p1) False = undefined
-normalRotation (Normal (x0,y0,z0)) (Normal (x1,y1,z1)) = trace msg $ rotation YXZ (0,-(b0+b1),-(a0+a1))
+--normalRotation p0 p1 | traceShow ("nr",p0,p1) False = undefined
+normalRotation (Normal (x0,y0,z0)) (Normal (x1,y1,z1)) = rotation YXZ (0,-(b0+b1),-(a0+a1))
   where
-            
-    tr s x = traceShow (s,x) x
-
-    msg = show [("a0",a0),("a1",a1),("b0",b0),("b1",b1)]
-
     a0 = (180/pi)* atan2 y0 x0
     a1 = (180/pi)* atan2 y1 x1
-
 
     b0 = (180/pi)* acos z0
     b1 = (180/pi)* acos z1
 
--- flattenPolygon, by translation and rotation, to the xy axis plane.
-flattenPolygon :: (Show a, Polygon p, RealFloat a) => p a -> Geometry a
-flattenPolygon ps = normalRotation (normalize $ crossProduct p0p1 p0p2) (Normal (0,0,1))
-                 <> position (-x0*1,-y0*1,-z0)
-  where 
-    (p0@(Position (x0,y0,z0)):p1@(Position (x1,y1,z1)):p2@(Position (x2,y2,z2)):_) = path ps
-    p0p1 = p0 `to` p1
-    p0p2 = p0 `to` p2
 
-      
-comparePolygon :: (Show a, Ord a, RealFloat a,Polygon p) => p a -> p a -> Stacking
+comparePolygon :: forall p a .(Show a, Ord a, RealFloat a,Polygon p) => p a -> p a -> Stacking
 comparePolygon pa pb
+--    | traceShow ("bs",bs) False = undefined
+--    | traceShow ("as",as) False = undefined
     -- Is it trivial in the z axis?
     | minimum [ z | Position (x,y,z) <- as ] > maximum [ z | Position (x,y,z) <- bs] = InFront
     | maximum [ z | Position (x,y,z) <- as ] < minimum [ z | Position (x,y,z) <- bs] = Behind
@@ -204,25 +215,35 @@ comparePolygon pa pb
     | minimum [ y | Position (x,y,z) <- as ] > maximum [ y | Position (x,y,z) <- bs] = Disjoint
     | maximum [ y | Position (x,y,z) <- as ] < minimum [ y | Position (x,y,z) <- bs] = Disjoint
 
+
+    | and [ sum (a_cross * Vector xyz) <= ad' | Position xyz <- bs ]            = InFront
+  
+    | and [ sum (a_cross * Vector xyz) >= ad' | Position xyz <- bs ]            = Behind
+
+    | and [ sum (b_cross * Vector xyz) <= bd' | Position xyz <- as ]            = Behind
+  
+    | and [ sum (b_cross * Vector xyz) >= bd' | Position xyz <- as ]            = InFront
+
     -- Otherwise, give up
     | otherwise = Indeterminate
 
   where
+    as, bs :: [Position a]
+    as@(as0@(Position as0'):as1:as2:_) = path pa
+    bs@(bs0@(Position bs0'):bs1:bs2:_) = path pb
 
-    as = path pa
-    bs = path pb
+    a_cross = crossProduct (as0 `to` as1) (as0 `to` as2)
+    b_cross = crossProduct (bs0 `to` bs1) (bs0 `to` bs2)
 
-    flat_as = flattenPolygon pa
-    flat_bs = flattenPolygon pb
-
-    () = ()
-
--- Do you intersect (x,y), a plane. If so, where.
--- Using http://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
+    ad' = sum (a_cross * Vector as0')
+    bd' = sum (b_cross * Vector bs0')
+    
 
 eps :: Fractional a => a
 eps = 0.00001
 
+-- Do you intersect (x,y), a plane. If so, where.
+-- Using http://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
 
 intersectQuad :: (Ord a, Fractional a) => Quad a -> (a,a) -> Maybe a
 intersectQuad (Quad p0 p1 p2 p3) (x,y) = 
@@ -276,36 +297,66 @@ splat f = unlines
     xsz = 50
     ysz = 20
 
-test = putStrLn $ splat $ fmap (fmap draw) $ intersectTriangle t1
-
-t1 :: Triangle Double
-t1 = Triangle (Position (0,-2,-2)) (Position (1,1,5)) (Position (-1.2,1,-5) )
-
-test2 = putStrLn $ splat $ fmap (fmap draw) $ intersectQuad q1
-
-test3 = putStrLn $ splat $ fmap (fmap draw) $ intersectQuad 
-   $ mapPosition ((perspective <> position (0,0,-2) <> rotation YXZ (-70,0,0)))
-   $ plane 2 2
-
-q1 :: Quad Double
-q1 = Quad (Position (-1,-1,-1)) (Position (1,-1,-1)) (Position (1,1,-1)) (Position (-1,1,-4))
-
 -- Quad goes counter-clock
 plane :: Fractional a => a -> a -> Quad a
 plane w h = Quad (Position (-w/2,h/2,0)) (Position (-w/2,-h/2,0)) (Position (w/2,-h/2,0)) (Position (w/2,h/2,0))
 
-test4 n = putStrLn $ splat $ fmap (fmap draw) $ intersectQuad $ quad'
-  where
-    quad' = mapPosition ( (flattenPolygon quad)) quad
+-- For testing
 
-    quad = mapPosition ( (position (0,0,0) <> rotation YXZ (n,10,-10)))
-          $ plane 2 2
-  
-  
-test5 = comparePolygon q1 q2
-  where        
-    q1 = mapPosition ((position (0,0,0) <> rotation YXZ (80,10,-10)))
-       $ plane 2 2
+newtype Degree = Degree (Double,Double,Double)
+ deriving Show
 
-    q2 = mapPosition ( (position (5,5,0) <> rotation YXZ (80,10,-10)))
-       $ plane 2 2
+instance Arbitrary Degree where
+  arbitrary = (\ a b c -> Degree (a,b,c))
+                     <$> choose (-360,360)
+                     <*> choose (-360,360)
+                     <*> choose (-360,360)
+
+-- Check comparePolygon function
+prop_compare (Degree lr) (Degree rr) (Degree cr) =
+--  trace (splat $ fmap (fmap draw) $ intersectQuads [p1,p2]) False
+    forAll (elements points) $ \ (x,y) ->
+    case (intersectQuad p1 (x,y), intersectQuad p2 (x,y)) of
+      (Just z1,Just z2) -> case cmp of
+        Behind          -> True ==> if z1 < z2 then True else trace (msg (x,y) z1 z2) False
+        InFront         -> True ==> if z1 > z2 then True else trace (msg (x,y) z1 z2) False
+        Disjoint        -> True ==> True
+        Indeterminate   -> True ==> True -- trace (msg (x,y) z1 z2) False -- error "should never be indeterminate"
+      _                 -> False ==> True
+   where
+     -- ((x,y),z1,z2,cmp)
+     msg (x,y) z1 z2 = "\n" ++ 
+       unlines [ "x: " ++ show x
+               , "y: " ++ show y
+               , "z1: " ++ show z1
+               , "z2: " ++ show z2
+               , "cmp: " ++ show cmp
+               , "p1: " ++ show p1
+               , "p2: " ++ show p2
+               ] ++ (splat $ fmap (fmap draw) $ intersectQuads (if cmp==Behind then [p2,p1] else [p1,p2]))
+                 ++ "\n"
+
+
+     -- splat $ fmap (fmap draw) $ intersectQuads [p2,p1])
+
+
+     points :: [(Double,Double)] 
+     points = (0,0) : [(x,y) | Position (x,y,z) <- path p1 ++ path p2 ]
+
+     common :: Geometry Double
+     common = position (0,0,-5) <> rotation YXZ cr
+
+     p1 :: Quad Double
+     p1 = run (common <> position (-1.5,0,0) <> rotation YXZ lr) $ plane 2 2
+
+     p2 :: Quad Double
+     p2 = run (common <> position ( 1.5,0,0) <> rotation YXZ rr) $ plane 2 2
+      
+     cmp :: Stacking
+     cmp = comparePolygon p1 p2
+
+qtest = quickCheckWith stdArgs { maxSuccess = 10000, maxDiscardRatio = 1000, chatty = True } prop_compare
+
+intersectQuads :: (Ord a, Fractional a) => [Quad a] -> (a,a) -> Maybe a
+intersectQuads qs p = head $ [ Just r | Just r <- map (\ q' -> intersectQuad q' p) qs ] ++ [Nothing]
+
