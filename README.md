@@ -15,16 +15,14 @@ Loads server, and stores the internal `a-scene` for modification.
 
 ### Regular web serving
 
-There are a number of reflections of the scene HTML file. The "pull" pages can
-always be reloaded to get the lastest updates.
+There are a number of reflections of the scene HTML file.
 
-COMMAND           | Push | Notes
-------------------|------|-----------
-GET /             |      | Landing page for viewing and editing scene 
-GET /static.html  |                    | Latest `AFrame` is injected into a *static* webpage
-GET /dynamic.html | :white_check_mark: | Scene is automatically updated
-
-There is a bookmarklet for saving the contents of the scene back to the server.
+COMMAND           | Push / Pull  | Notes
+------------------|--------------|-----------
+GET /             |              | Landing page for viewing and editing scene 
+GET /static.html  |              | Latest `AFrame` is injected into a *static* webpage
+GET /dynamic.html | Push Only    | Latest `AFrame`, and Scene is automatically updated
+GET /edit.html    | Push & Pull  | Scene is automatically updated, and changes back to a shadow `AFrame`
 
 ### Serving assets, JavaScript, etc.
 
