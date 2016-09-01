@@ -157,12 +157,12 @@ aframeServer optScene port jssExtras aframe = do
                Nothing    -> "."
   scene <- case optScene of
                Just s  -> return s
-               Nothing -> getDataFileName "static/index.html"
+               Nothing -> getDataFileName "static/default.html"
   let jquery = "https://code.jquery.com/jquery-2.2.3.min.js"
       utils  = "aframe-server-utils.js"
       scenes :: [(String,[String])]
       scenes = map (\ (a,b) -> (a,b ++ jssExtras))
-               [ ("/",[])
+               [ ("/static.html",[])
                , ("/dynamic.html",
                     [ "https://code.jquery.com/jquery-2.2.3.min.js"
                     ] ++
@@ -195,6 +195,8 @@ aframeServer optScene port jssExtras aframe = do
 
   S.scotty port $ do
 --    S.middleware $ logStdoutDev
+
+--    S.get "/" $ 
 
     sequence_ 
       [ S.get (capture s) $ do
