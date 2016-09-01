@@ -1,5 +1,7 @@
 # aframe-server
-Shared server-based space for A-Frame scenes.
+
+Shared server-based space for A-Frame scene. Provides mechanisms for dynamically updating and edits scenes,
+and sharing them between browsers.
 
 ## usage
 
@@ -16,14 +18,17 @@ Loads server, and stores the internal `a-scene` for modification.
 There are a number of reflections of the scene HTML file. The "pull" pages can
 always be reloaded to get the lastest updates.
 
-COMMAND               | Push | Notes
-----------------------|------|-----------
-GET /                 | :white_check_mark: | Scene is automatically updated
-GET /static.html      |                    | Latest `AFrame` is injected into a *static* webpage
+COMMAND           | Push | Notes
+------------------|------|-----------
+GET /             |      | Landing page for viewing and editing scene 
+GET /static.html  |                    | Latest `AFrame` is injected into a *static* webpage
+GET /dynamic.html | :white_check_mark: | Scene is automatically updated
 
 There is a bookmarklet for saving the contents of the scene back to the server.
 
 ### Serving assets, JavaScript, etc.
+
+Basically a regular web server with regard to files.
 
 COMMAND               | Action                         | Format | Notes
 ----------------------|--------------------------------|--------|-----
