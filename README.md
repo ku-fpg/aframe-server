@@ -9,9 +9,12 @@ and sharing them between browsers.
 aframe-server <path-to-scene.html>
 ````
 
-Loads server, and stores the internal `a-scene` for modification.
+Loads server, and stores the internal `a-scene` for modification. Typically accessable on 
+
+    http://locahost:3947/
 
 ## Server API
+
 
 ### Regular web serving
 
