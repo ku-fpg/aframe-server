@@ -64,31 +64,6 @@ defaultOptions = Options
   , sceneComponents = []
   } 
 
-{-
-data AFrameP :: * -> * where
-  SetAFrame       :: AFrame -> AFrameP ()
-  GetAFrame       ::           AFrameP AFrame  --  Get the current and/or latest aframe
-  GetAFrameStatus :: Int    -> AFrameP Change  --  version tag, returns instructions to get the the latest version
-
-data Change = HEAD    -- already at latest, signals a timeout
-            | RELOAD  -- change is complex; please reload entire model
-            | DELTAS  -- Small changes have been made; here they are
-                      -- Always include an update to the verison tag.
-                [(Path,Attribute)]
-
-instance ToJSON Change where
-    -- this generates a Value
-    toJSON HEAD   = object ["change" .= ("HEAD" :: String)]
-    toJSON RELOAD = object ["change" .= ("RELOAD" :: String)]
-    toJSON (DELTAS pas) 
-                  = object ["change" .= ("DELTAS" :: String)
-                           ,"changes" .= 
-                               [ object ["path" .= p, "attr" .= l, "value" .= v]
-                               | (p,(l,v)) <-  pas
-                               ]
-                           ]
--}        
-
 
 -- | create a web server, and our AFrameP object, returning the AFrameP object.
 aframeStart :: Options -> AFrame -> IO Object
@@ -254,50 +229,6 @@ aframeServer optScene port jssExtras aframe = do
     S.middleware $ staticPolicy (addBase dir)
 
   return ()
-{-
-fileReader :: String -> Int -> (AFrameP :~> STM) -> IO ()
-fileReader fileName delay obj = loop ""
-  where
-     loop old = do
-        threadDelay delay
-        new <- readFile fileName
-        if new == old
-        then loop new
-        else case readAFrame new of
-          Nothing -> loop old
-          Just a -> do atomically (obj # SetAFrame a)
-                       loop new
-
-fileWriter :: String -> Int -> (AFrameP :~> STM) -> IO ()
-fileWriter fileName delay obj = loop ""
-  where
-     loop old = do
-        threadDelay delay
-        aframe <- atomically (obj # GetAFrame)
-        case getAttribute "version" aframe of
-          Just version | version == old -> loop version
-                       | otherwise -> do
-            -- we do not include the version number in what we save
-            -- the version number is sessions 
-            writeFile fileName $ showAFrame $ resetAttribute "version" $ aframe
-            loop version
-
-
-aframeTrace :: (AFrameP :~> STM) -> IO ()
-aframeTrace obj = do
-        aframe <- atomically (obj # GetAFrame)
-        loop aframe
-  where
-     loop old = do
-        threadDelay (1000 * 1000)
-        new <- atomically (obj # GetAFrame)
-        if old == new
-        then loop new
-        else do
-            let ds = deltaAFrame old new 
-            print ("diff",ds) -- Diff.compress ds)
-            loop new
--}
 
 {-
   -- | a version of 'aframeStart' that does not return.
