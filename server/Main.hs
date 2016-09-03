@@ -34,7 +34,7 @@ main1 file opts = do
   case readAFrame x of
     Nothing -> error "can not read sample file"
     Just a -> do obj <- aframeStart opts a
-                 fileReader file (1000 * 1000) obj
+                 fileReader file (1000 * 1000) obj -- re-read the file once a second
 
 
 

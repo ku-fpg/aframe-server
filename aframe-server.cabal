@@ -17,6 +17,7 @@ cabal-version:       >=1.10
 
 data-files:
             static/index.html
+            static/default.html
             static/js/aframe-server-utils.js
 
 library
