@@ -70,51 +70,7 @@ aframeStart :: Options -> AFrame -> IO Object
 aframeStart opts a = do
   let fileName = scenePath opts
 
-  let modifyDB new (fm,ix) =
-       case Map.lookup ix fm of
-        Nothing -> error "internal error"
-        Just a | new == a  -> (fm,ix)   -- ignore
-               | otherwise -> let ix' = succ ix
-                              in (Map.insert ix' new fm,ix')
-
-  -- The DB is a tuple of (map from # to AFrame, and the current #)
-  -- GET gets the current # via lookup
-  -- SET sets a *new/unique* #, if there are changes
-  --   - It is not possible to SET a version without making a change first;
-  --   - A dup update is the identity.
-  -- The version tag is never in the underlying AFrame, but added
-  -- when GET-ing the AFrame, and removed/ignored when SET-ing.
-  -- The act of SET-ing is *asking* for a new version number to be assigned.
-  var :: TVar (Map.Map Int AFrame, Int) <- newTVarIO $ (Map.singleton 0 a, 0)
-
-  print a
-  putStrLn $ showAFrame a
-
-  let obj ::Object
-      obj = Object $ \ case
-              GetAFrame -> do
-                                  (fm,ix) <- readTVar var
-                                  case Map.lookup ix fm of
-                                    Nothing -> error "internal error"
-                                    Just v -> return $ setAttribute "version" (fromString $ show ix) $ v
-
-              SetAFrame a -> do
-                                  (fm,ix) <- readTVar var
-                                  -- version tag always overwritten on SetAFrame
-                                  writeTVar var $ modifyDB a (fm,ix)
-              GetAFrameStatus p -> do
-                                  (fm,ix) <- readTVar var
-                                  if ix /= p 
-                                  then case (Map.lookup p fm,Map.lookup ix fm) of
-                                         (Just old,Just new) ->
-                                            case deltaAFrame old new of
-                                              Just diffs -> return 
-                                                                $ DELTAS
-                                                                $ (Path "a-scene" [],("version",fromString $ show ix))
-                                                                : diffs
-                                              Nothing -> return RELOAD
-                                         _ -> return RELOAD
-                                  else retry       -- try again
+  obj <- newObject a
 
   forkIO $ aframeServer fileName 3947 (jsFiles opts) obj
   
