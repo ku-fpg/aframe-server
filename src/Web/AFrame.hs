@@ -196,7 +196,9 @@ aframeServer optScene port jssExtras aframe = do
   S.scotty port $ do
 --    S.middleware $ logStdoutDev
 
---    S.get "/" $ 
+    S.get "/" $ do
+       txt <- liftIO $ getDataFileName $ "static/index.html"
+       S.file $ txt
 
     sequence_ 
       [ S.get (capture s) $ do
