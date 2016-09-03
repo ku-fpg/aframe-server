@@ -3,14 +3,14 @@
 
 module Web.AFrame 
   ( -- * The Update data-structure
-    AFrameP(..)  
+    AFrameR(..)  
   , Change(..)
     -- * Options
   , Options(..)
   , defaultOptions
     -- * The web server
   , aframeStart
-  , aframeServe
+--  , aframeServe
     -- * Actors for the AFrameP object
   , fileReader
   , fileWriter
@@ -46,6 +46,7 @@ import Data.List as L
 
 import qualified Data.Map.Strict as Map
 
+import           Web.AFrame.Object
 
 import Paths_aframe_server
 
@@ -63,7 +64,7 @@ defaultOptions = Options
   , sceneComponents = []
   } 
 
-
+{-
 data AFrameP :: * -> * where
   SetAFrame       :: AFrame -> AFrameP ()
   GetAFrame       ::           AFrameP AFrame  --  Get the current and/or latest aframe
@@ -86,11 +87,11 @@ instance ToJSON Change where
                                | (p,(l,v)) <-  pas
                                ]
                            ]
-        
+-}        
 
 
 -- | create a web server, and our AFrameP object, returning the AFrameP object.
-aframeStart :: Options -> AFrame -> IO (AFrameP :~> STM)
+aframeStart :: Options -> AFrame -> IO Object
 aframeStart opts a = do
   let fileName = scenePath opts
 
@@ -114,8 +115,8 @@ aframeStart opts a = do
   print a
   putStrLn $ showAFrame a
 
-  let obj :: AFrameP :~> STM
-      obj = nat $ \ case
+  let obj ::Object
+      obj = Object $ \ case
               GetAFrame -> do
                                   (fm,ix) <- readTVar var
                                   case Map.lookup ix fm of
@@ -150,7 +151,7 @@ aframeStart opts a = do
 -- The second argument is the port to be served from.
 -- The thrid argument is a list of URLs to serve up as 
 
-aframeServer :: Maybe String -> Int -> [String] -> (AFrameP :~> STM) -> IO ()
+aframeServer :: Maybe String -> Int -> [String] -> Object -> IO ()
 aframeServer optScene port jssExtras aframe = do
   let dir  = case optScene of
                Just s -> takeDirectory s
@@ -253,7 +254,7 @@ aframeServer optScene port jssExtras aframe = do
     S.middleware $ staticPolicy (addBase dir)
 
   return ()
-
+{-
 fileReader :: String -> Int -> (AFrameP :~> STM) -> IO ()
 fileReader fileName delay obj = loop ""
   where
@@ -296,12 +297,15 @@ aframeTrace obj = do
             let ds = deltaAFrame old new 
             print ("diff",ds) -- Diff.compress ds)
             loop new
+-}
 
-
+{-
+  -- | a version of 'aframeStart' that does not return.
 aframeServe :: Options -> AFrame -> IO (AFrameP :~> STM)
 aframeServe opt af = do
   o <- aframeStart opt af
   let loop = do
         threadDelay (1000 * 1000)
-	loop
+        loop
   loop
+-}

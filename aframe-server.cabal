@@ -23,6 +23,7 @@ data-files:
 library
   exposed-modules:     Web.AFrame
                  ,     Web.AFrame.GHCi
+                 ,     Web.AFrame.Object
                  ,     Text.AFrame
                  ,     Text.AFrame.Geometry
                  ,     Text.AFrame.DSL

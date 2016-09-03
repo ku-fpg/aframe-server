@@ -10,9 +10,7 @@ module Web.AFrame.GHCi
 
 import           Control.Concurrent
 import qualified Control.Natural as N
-import           Control.Natural(type (:~>), nat)
-import qualified Control.Object as O
-import           Control.Object ((#))
+import           Control.Natural(type (:~>), nat, (#))
 
 import           Data.Functor.Identity
 import           Data.Monoid
@@ -21,13 +19,14 @@ import           Data.String (fromString)
 import           Text.AFrame as AFrame
 import           Text.AFrame.DSL (scene)
 import           Web.AFrame
+import           Web.AFrame.Object
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
 
 import           System.IO.Unsafe
 
 {-# NOINLINE aframeScene #-}
-aframeScene :: MVar (AFrameP :~> STM)
+aframeScene :: MVar Object
 aframeScene = unsafePerformIO newEmptyMVar
 
 start :: Options -> IO ()
