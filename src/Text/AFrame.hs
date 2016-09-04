@@ -25,7 +25,7 @@ import Numeric
 --   'AFrame' follows the DOM, except there are no textual  
 --   content; it is tags all the way down. 
 --
---   An xception is that \<script>ABC\</script> is encoded using 
+--   An exception is that \<script>ABC\</script> is encoded using 
 --  \<script text=\"ABC\">\</script>
 
 data AFrame       = AFrame Primitive [Attribute] [AFrame]

@@ -30,7 +30,7 @@ aframeScene :: MVar Object
 aframeScene = unsafePerformIO newEmptyMVar
 
 start :: Options -> IO ()
-start o = do obj <- aframeStart defaultOptions $ scene $ return () 
+start o = do ServerState obj _ <- aframeStart defaultOptions $ scene $ return () 
              putMVar aframeScene obj
 
 

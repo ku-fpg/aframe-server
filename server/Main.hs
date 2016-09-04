@@ -33,8 +33,9 @@ main1 file opts = do
   x <- readFile file
   case readAFrame x of
     Nothing -> error "can not read sample file"
-    Just a -> do obj <- aframeStart opts a
-                 fileReader file (1000 * 1000) obj -- re-read the file once a second
+    Just a -> do ServerState master shadow <- aframeStart opts a
+                 fileReader file (1000 * 1000) master -- re-read the file once a second
+                 -- Should we save the shadow?
 
 
 

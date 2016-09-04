@@ -8,6 +8,7 @@ module Web.AFrame
     -- * Options
   , Options(..)
   , defaultOptions
+  , ServerState(..)
     -- * The web server
   , aframeStart
 --  , aframeServe
@@ -52,7 +53,9 @@ import Paths_aframe_server
 
 
 data Options = Options 
-  { scenePath       :: Maybe FilePath   -- The AFrame Text, embedded inside an HTML document. (or default static file)
+  { scenePath       :: Maybe FilePath   -- The AFrame Text, embedded inside an HTML document. 
+                                        -- Nothing when you have no original file.
+                                        -- Currenly only used to find the root directory
   , jsFiles         :: [String]   -- JS files to inject into theh HTML
   , sceneComponents :: [String]   -- components to inject into the \<a-scene>
   } deriving (Show)
@@ -64,17 +67,25 @@ defaultOptions = Options
   , sceneComponents = []
   } 
 
+data ServerState = ServerState 
+ { masterAFrame :: Object               -- this is the one we serve, RO
+ , shadowAFrame :: Object               -- this is the shadow, which is a copy of the /edit page's DOM.
+                                        -- it may be empty (how?)
+ }
 
 -- | create a web server, and our AFrameP object, returning the AFrameP object.
-aframeStart :: Options -> AFrame -> IO Object
+aframeStart :: Options -> AFrame -> IO ServerState
 aframeStart opts a = do
   let fileName = scenePath opts
 
-  obj <- newObject a
+  master <- newObject a
+  shadow <- newObject nonAFrame
 
-  forkIO $ aframeServer fileName 3947 (jsFiles opts) obj
+  let state = ServerState master shadow
+
+  forkIO $ aframeServer fileName 3947 (jsFiles opts) $ state
   
-  return obj
+  return state
 
 -- This entry point generates a server that handles the AFrame.
 -- It never terminates, but can be started in a seperate thread.
@@ -82,8 +93,8 @@ aframeStart opts a = do
 -- The second argument is the port to be served from.
 -- The thrid argument is a list of URLs to serve up as 
 
-aframeServer :: Maybe String -> Int -> [String] -> Object -> IO ()
-aframeServer optScene port jssExtras aframe = do
+aframeServer :: Maybe String -> Int -> [String] -> ServerState -> IO ()
+aframeServer optScene port jssExtras state = do
   let dir  = case optScene of
                Just s -> takeDirectory s
                Nothing    -> "."
@@ -139,7 +150,7 @@ aframeServer optScene port jssExtras aframe = do
           -- and if not, use a (static) wrapper.
           txt <- liftIO $ do
                 wrapper <- readFile scene
-                af      <- atomically (aframe # GetAFrame)
+                af      <- atomically (masterAFrame state # GetAFrame)
                 return $ injectJS jss 0 $ injectAFrame af wrapper
 --                return $ wrapper
           S.html $ LT.pack $ txt   
@@ -165,7 +176,7 @@ aframeServer optScene port jssExtras aframe = do
     S.get ("/scene") $ do
           xRequest
           s <- liftIO $ do
-                  atomically (aframe # GetAFrame)
+                  atomically (masterAFrame state # GetAFrame)
           S.html $ aframeToText $ s
 
     S.get ("/status/:version") $ do
@@ -174,7 +185,7 @@ aframeServer optScene port jssExtras aframe = do
           s <- liftIO $ do
                   timer <- registerDelay (3 * 1000 * 1000)
                   atomically $
-                        (aframe # GetAFrameStatus v) `orElse`
+                        (masterAFrame state # GetAFrameStatus v) `orElse`
                                 do ping <- readTVar timer
                                    if ping 
                                    then return HEAD -- timeout

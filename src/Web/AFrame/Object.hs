@@ -12,6 +12,8 @@ module Web.AFrame.Object
   , fileReader
   , fileWriter
   , aframeTrace
+    -- * dummy AFrane
+  , nonAFrame
   ) where
 
 import           Control.Concurrent
@@ -135,6 +137,8 @@ newObject a = do
   -- The version tag is never in the underlying AFrame, but added
   -- when GET-ing the AFrame, and removed/ignored when SET-ing.
   -- The act of SET-ing is *asking* for a new version number to be assigned.
+  --
+
   var :: TVar (Map.Map Int AFrame, Int) <- newTVarIO $ (Map.singleton 0 a, 0)
 
   print a
@@ -165,3 +169,8 @@ newObject a = do
                                          _ -> return RELOAD
                                   else retry       -- try again
 
+
+-- If you want to have an empty AFrame, and mark it as empty, just use an empty div.
+
+nonAFrame :: AFrame
+nonAFrame = AFrame "div" [] []
