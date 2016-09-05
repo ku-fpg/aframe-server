@@ -44,6 +44,8 @@ COMMAND    | Action                        | Format
 -----------|-------------------------------|--------
 GET /scene | Gets the whole (latest) scene | XML
 GET /status/N | Ask about version #N       | { "change": "HEAD" or "RELOAD" }
+PUT /scene | Send scene to the server's shadow AFrame | sends text/plain, replies { "success": true }
+
 
 Assets and Libraries under different LICENSE.
 
