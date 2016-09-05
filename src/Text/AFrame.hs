@@ -123,7 +123,7 @@ readAFrame :: String -> Maybe AFrame
 readAFrame str = do
     let doms = T.parseDOM True (LT.fromStrict $ pack str)
     case doms of
-      [T.NodeElement dom] -> do
+      (T.NodeElement dom:_) -> do
         let aframe  = elementToAFrame dom
         findAFrame aframe
       _ -> error $ show ("found strange DOM",doms)
