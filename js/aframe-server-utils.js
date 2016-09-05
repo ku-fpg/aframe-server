@@ -1,4 +1,4 @@
-/* Reload the aframe dynamically, as needed
+/* Reload the aframe dynamically, as needed. Put the scene back to the server, as needed.
  */
 
 function ServerUtils () {
@@ -24,7 +24,22 @@ ServerUtils.prototype = {
   },
 
   onSceneLoaded: function () {
-    this.loadScene("HEAD")
+    // Everything is ready to go.
+    // From http://stackoverflow.com/questions/979975/how-to-get-the-value-from-the-get-parameters
+    var params = window.location.search
+      .substring(1)
+      .split("&")
+      .map(v => v.split("="))
+      .reduce((map, [key, value]) => map.set(key, decodeURIComponent(value)), new Map())
+    console.log("onSceneLoaded !",params);
+    // Do we need to send the edited Scene back to the server periodically?
+    if (params.get("edit") != undefined) {
+      console.log("edit loop enabled");
+      this.pushScene();
+    } else {
+      console.log("did not find edit");
+    }
+    this.loadScene("HEAD")    
   },
   loadScene: function(ty) {
     var version = $("a-scene").attr("version");
@@ -99,8 +114,23 @@ ServerUtils.prototype = {
       $("a-scene").attr("version",xml.attr("version"))  // update the version number
     }
     this.loadScene("HEAD");
+  },
+  pushScene: function() {
+    $.ajax(
+      { type: "PUT",
+        url: "/scene",
+        data: document.getElementsByTagName('body')[0].innerHTML,
+        contentType:  'text/plain; charset=UTF-8',
+        dataType: "json",     // result type
+        cache: false,
+        error: function() { alert("No data found."); },
+        success: function(xml) {
+             alert("it works");
+//           alert($(xml).find("project")[0].attr("id"));
+      }
+    });
+    console.log("pushScene ...");
   }
-  
 };
 
 module.exports = new ServerUtils();
