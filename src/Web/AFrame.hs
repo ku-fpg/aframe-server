@@ -49,6 +49,8 @@ import qualified Data.Map.Strict as Map
 
 import           Web.AFrame.Object
 
+import           Data.Text.Encoding
+
 import Paths_aframe_server
 
 
@@ -193,6 +195,18 @@ aframeServer optScene port jssExtras state = do
 
           S.json $ s
 
+    -- Puts the scene into a *shadow* AFrame Object
+    -- From there, other tools reconcile with the *master* Object.
+    -- NOTES:
+    S.put ("/scene") $ do
+          xRequest
+          bs <- body
+          case readAFrame (T.unpack $ decodeUtf8 $ LBS.toStrict $ bs) of
+             Nothing -> S.json $ UpdateSuccess $ False
+             Just af -> do
+               liftIO $ print af
+               S.json $ UpdateSuccess $ True
+
     S.middleware $ staticPolicy (addBase dir)
 
   return ()
@@ -207,3 +221,9 @@ aframeServe opt af = do
         loop
   loop
 -}
+
+newtype UpdateSuccess = UpdateSuccess Bool
+
+instance ToJSON UpdateSuccess where
+    -- this generates a Value
+    toJSON (UpdateSuccess res) = object ["success" .= (res :: Bool)]
