@@ -9,3 +9,6 @@ test::
 build::
 	npm run build
 	cp ./static/js/aframe-server-utils.js ./.cabal-sandbox/share/x86_64-osx-ghc-7.10.3/aframe-server-0.1.0.0/static/js/aframe-server-utils.js
+
+testme::
+	npm run build && cabal install && ./dist/build/aframe-server/aframe-server examples/demo.html
