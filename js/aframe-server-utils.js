@@ -34,12 +34,23 @@ ServerUtils.prototype = {
     console.log("onSceneLoaded !",params);
     // Do we need to send the edited Scene back to the server periodically?
     if (params.get("edit") != undefined) {
-      console.log("edit loop enabled");
-      this.pushScene();
+      console.log("edit key (s+cntl+alt) enabled");
+      // (from aframe's inspector.js)
+      this.onKeydown = this.onKeydown.bind(this);
+      window.addEventListener('keydown', this.onKeydown);
+      this.pushScene(); // And also push back the initial version of the scene to the shadow AFrame Object.
     } else {
       console.log("did not find edit");
     }
     this.loadScene("HEAD")    
+  },
+  onKeydown: function (evt) {
+    // (from aframe's inspector.js)
+    // Alt + Ctrl + s
+    console.log("onKeydown",evt)
+    var shortcutPressed = evt.keyCode === 83 && evt.ctrlKey && evt.altKey;
+    if (!shortcutPressed) { return; }
+    this.pushScene();
   },
   loadScene: function(ty) {
     var version = $("a-scene").attr("version");
@@ -116,6 +127,8 @@ ServerUtils.prototype = {
     this.loadScene("HEAD");
   },
   pushScene: function() {
+    console.log("pushScene")
+    var that = this;
     $.ajax(
       { type: "PUT",
         url: "/scene",
@@ -123,9 +136,11 @@ ServerUtils.prototype = {
         contentType:  'text/plain; charset=UTF-8',
         dataType: "json",     // result type
         cache: false,
-        error: function() { alert("No data found."); },
+        error: function() {
+//          console.log("Failed to send DOM; retrying");
+        },
         success: function(xml) {
-             alert("it works");
+//             alert("it works");
 //           alert($(xml).find("project")[0].attr("id"));
       }
     });
