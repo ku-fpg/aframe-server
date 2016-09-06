@@ -204,7 +204,8 @@ aframeServer optScene port jssExtras state = do
           case readAFrame (T.unpack $ decodeUtf8 $ LBS.toStrict $ bs) of
              Nothing -> S.json $ UpdateSuccess $ False
              Just af -> do
-               liftIO $ print af
+               liftIO $ atomically $ do
+                  shadowAFrame state # SetAFrame af 
                S.json $ UpdateSuccess $ True
 
     S.middleware $ staticPolicy (addBase dir)
