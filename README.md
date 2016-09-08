@@ -25,7 +25,7 @@ COMMAND           | Push / Pull  | Notes
 GET /             |              | Landing page for viewing and editing scene 
 GET /static.html  |              | Latest `AFrame` is injected into a *static* webpage
 GET /dynamic.html | Push Only    | Latest `AFrame`, and Scene is automatically pushed from server
-GET /edit.html    | Push & Pull  | Scene is automatically pushed from server, and changes are pulled back to a shadow `AFrame`, also on the server
+GET /dynamic.html&edit=1 | Push & Pull | Scene is automatically pushed from server, and changes are pulled back to a shadow `AFrame`, also on the server
 
 ### Serving assets, JavaScript, etc.
 
