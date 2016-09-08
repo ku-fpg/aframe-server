@@ -158,6 +158,12 @@ aframeServer optScene port jssExtras state = do
           S.html $ LT.pack $ txt   
       | (s,jss) <- scenes
       ]
+ 
+    S.get "/diff.html" $ do
+          txt <- liftIO $ do
+                fileName <- getDataFileName "static/diff.html"
+                readFile fileName
+          S.html $ LT.pack $ txt   
 
     -- support the static files
     sequence_
