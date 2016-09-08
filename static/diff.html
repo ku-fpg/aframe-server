@@ -6,11 +6,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bootstrap 101 Template</title>
 
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
     <!-- Bootstrap -->
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
   </head>
   <body>
-    <h1>Hello, world!</h1>
 
+    <div class="container theme-showcase" role="main">
+
+      <div id="target">
+      </div>
+        
+    </div>
+
+  <script>
+$(function() {
+        var scene = null;
+   
+        var renderNode = function(xml) {
+                if (!xml.localName) {
+                        return "???";
+                }
+                var txt = xml.localName;
+                txt += "\n<ul>\n";
+                for(var i = 0;i < xml.attributes.length;i++) {
+                        var item = xml.attributes.item(i);
+                        txt += "<li>";
+                        txt += item.name;
+                        txt += " = ";
+                        txt += "\"" + item.value + "\"";
+                        txt += "</li>";
+                }
+                for(var i = 0;i < xml.children.length;i++) {
+                        var child = xml.children[i];
+                        txt += "<li>";
+                        txt += renderNode(child);
+                        txt += "</li>";
+                }
+                txt += "\n</ul>\n";
+                return txt;
+        }
+        
+        var render = function() {
+           var xml = $(scene)[0];
+           var html = renderNode(xml);
+           $("#target").html(html);
+        };
+        $.get("/REST/scene", function(o) {
+                console.log("/REST/scene",o);
+                scene = o;
+                debugging.scene = scene;
+                render();
+        });
+
+        debugging = { renderNode: renderNode, render: render };
+
+});        
+  </script>
   </body>
 </html>
