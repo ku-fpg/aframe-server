@@ -35,16 +35,17 @@ COMMAND               | Action                         | Format | Notes
 ----------------------|--------------------------------|--------|-----
 GET /js/foo.js  (etc) | Get a js file                  | JS     | Must be in same root as path-to-scene
 
-The path `/static` is reserved for internal (typically injected) files.
+The path `/static/...` is reserved for internal (sometimes injected) files,
+and the path `/REST/...` is reserved for the RESTful API.
 
-### CRUD web serving
+### REST web serving
 
 
 COMMAND    | Action                        | Format
 -----------|-------------------------------|--------
-GET /scene | Gets the whole (latest) scene | XML
-GET /status/N | Ask about version #N       | { "change": "HEAD" or "RELOAD" }
-PUT /scene | Send scene to the server's shadow AFrame | sends text/plain, replies { "success": true }
+GET /REST/scene | Gets the whole (latest) scene | XML
+GET /REST/scene/N | Ask about version #N       | { "change": "HEAD" or "RELOAD" }
+PUT /REST/scene | Send scene to the server's shadow AFrame | sends text/plain, replies { "success": true }
 
 
 Assets and Libraries under different LICENSE.

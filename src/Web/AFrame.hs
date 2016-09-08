@@ -175,13 +175,13 @@ aframeServer optScene port jssExtras state = do
       , not $ "/static/" `L.isPrefixOf` p
       ]
 
-    S.get ("/scene") $ do
+    S.get ("/REST/scene") $ do
           xRequest
           s <- liftIO $ do
                   atomically (masterAFrame state # GetAFrame)
           S.html $ aframeToText $ s
 
-    S.get ("/status/:version") $ do
+    S.get ("/REST/scene/:version") $ do
           xRequest
           v :: Int <- param "version"
           s <- liftIO $ do
@@ -198,7 +198,7 @@ aframeServer optScene port jssExtras state = do
     -- Puts the scene into a *shadow* AFrame Object
     -- From there, other tools reconcile with the *master* Object.
     -- NOTES:
-    S.put ("/scene") $ do
+    S.put ("/REST/scene") $ do
           xRequest
           bs <- body
           case readAFrame (T.unpack $ decodeUtf8 $ LBS.toStrict $ bs) of

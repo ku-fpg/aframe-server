@@ -56,10 +56,10 @@ ServerUtils.prototype = {
     var version = $("a-scene").attr("version");
     if (version == undefined || ty == "RELOAD") {
       // do this the slow way
-      $.get( "/scene", this.resetScene.bind(this));
+      $.get( "/REST/scene", this.resetScene.bind(this));
     } else {
       // check for changes
-      $.getJSON( "/status/" + version, this.updateScene.bind(this));          
+      $.getJSON( "/REST/scene/" + version, this.updateScene.bind(this));          
     }
   },
   updateScene: function(d) {
@@ -131,7 +131,7 @@ ServerUtils.prototype = {
     var that = this;
     $.ajax(
       { type: "PUT",
-        url: "/scene",
+        url: "/REST/scene",
         data: document.getElementsByTagName('body')[0].innerHTML,
         contentType:  'text/plain; charset=UTF-8',
         dataType: "json",     // result type
