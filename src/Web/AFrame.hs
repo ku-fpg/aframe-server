@@ -175,30 +175,40 @@ aframeServer optScene port jssExtras state = do
       , not $ "/static/" `L.isPrefixOf` p
       ]
 
-    S.get ("/REST/scene") $ do
-          xRequest
-          s <- liftIO $ do
-                  atomically (masterAFrame state # GetAFrame)
-          S.html $ aframeToText $ s
 
-    S.get ("/REST/scene/:version") $ do
-          xRequest
-          v :: Int <- param "version"
-          s <- liftIO $ do
-                  timer <- registerDelay (3 * 1000 * 1000)
-                  atomically $
-                        (masterAFrame state # GetAFrameStatus v) `orElse`
-                                do ping <- readTVar timer
-                                   if ping 
-                                   then return HEAD -- timeout
-                                   else retry       -- try again
 
-          S.json $ s
+    sequence_
+      [ do S.get (capture $ "/REST/" ++ nm) $ do
+                xRequest
+                s <- liftIO $ do
+                   atomically (f state # GetAFrame) :: IO AFrame
+                S.html $ aframeToText $ s
+
+           S.get (capture $ "/REST/" ++ nm ++ "/:version") $ do
+                  xRequest
+                  v :: Int <- param "version"
+                  s <- liftIO $ do
+                          timer <- registerDelay (3 * 1000 * 1000)
+                          atomically $
+                                (f state # GetAFrameStatus v) `orElse`
+                                        do ping <- readTVar timer
+                                           if ping 
+                                           then return HEAD -- timeout
+                                           else retry       -- try again
+
+                  S.json $ s
+
+      | (f :: ServerState -> Object,nm) <- 
+              [(masterAFrame,"scene")
+              ,(shadowAFrame,"shadow")
+              ]
+      ]
+
 
     -- Puts the scene into a *shadow* AFrame Object
     -- From there, other tools reconcile with the *master* Object.
-    -- NOTES:
-    S.put ("/REST/scene") $ do
+
+    S.put ("/REST/shadow") $ do
           xRequest
           bs <- body
           case readAFrame (T.unpack $ decodeUtf8 $ LBS.toStrict $ bs) of
@@ -206,6 +216,7 @@ aframeServer optScene port jssExtras state = do
              Just af -> do
                liftIO $ atomically $ do
                   shadowAFrame state # SetAFrame af 
+               liftIO $ print "Set shadow"
                S.json $ UpdateSuccess $ True
 
     S.middleware $ staticPolicy (addBase dir)

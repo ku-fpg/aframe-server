@@ -41,11 +41,13 @@ and the path `/REST/...` is reserved for the RESTful API.
 ### REST web serving
 
 
-COMMAND    | Action                        | Format
------------|-------------------------------|--------
-GET /REST/scene | Gets the whole (latest) scene | XML
-GET /REST/scene/N | Ask about version #N       | { "change": "HEAD" or "RELOAD" }
-PUT /REST/scene | Send scene to the server's shadow AFrame | sends text/plain, replies { "success": true }
+COMMAND            | Action                        | Format
+-------------------|-------------------------------|--------
+GET /REST/scene    | Gets the whole (latest) scene | XML
+GET /REST/scene/N  | Ask about version #N          | { "change": "HEAD" or "RELOAD" or "DELTAS", ...}
+GET /REST/shadow   | Gets the whole (latest) scene | XML
+GET /REST/shadow/N | Ask about version #N          | { "change": "HEAD" or "RELOAD" or "DELTAS", ...}
+PUT /REST/shadow   | Send scene to the server's shadow AFrame | sends text/plain, replies { "success": true }
 
 
 Assets and Libraries under different LICENSE.

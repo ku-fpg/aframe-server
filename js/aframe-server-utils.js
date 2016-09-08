@@ -131,7 +131,7 @@ ServerUtils.prototype = {
     var that = this;
     $.ajax(
       { type: "PUT",
-        url: "/REST/scene",
+        url: "/REST/shadow",
         data: document.getElementsByTagName('body')[0].innerHTML,
         contentType:  'text/plain; charset=UTF-8',
         dataType: "json",     // result type
