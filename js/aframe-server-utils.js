@@ -16,6 +16,9 @@ ServerUtils.prototype = {
 
   onDomLoaded: function () {
     this.sceneEl = document.querySelector('a-scene');
+    if (this.sceneEl == null) {
+      return;
+    }
     if (this.sceneEl.hasLoaded) {
       this.onSceneLoaded();
     } else {
@@ -39,10 +42,10 @@ ServerUtils.prototype = {
       this.onKeydown = this.onKeydown.bind(this);
       window.addEventListener('keydown', this.onKeydown);
       this.pushScene(); // And also push back the initial version of the scene to the shadow AFrame Object.
-    } else {
-      console.log("did not find edit");
     }
-    this.loadScene("HEAD")    
+    if (params.get("load") != undefined) {
+      this.loadScene("HEAD")      
+    }
   },
   onKeydown: function (evt) {
     // (from aframe's inspector.js)
@@ -145,86 +148,90 @@ ServerUtils.prototype = {
       }
     });
     console.log("pushScene ...");
+  },
+
+  initDiff: function() {
+    var self = this;
+    $.get("/REST/scene", function(o) {
+            console.log("/REST/scene",o);
+            self.scene = o;
+            self.renderDiff();
+    });
+    $.get("/REST/scene", function(o) {
+            console.log("/REST/scene",o);
+            self.shadow = o;
+            self.renderDiff();
+    });
+  },
+
+  renderNode: function(xml) {
+          if (!xml.localName) {
+                  return "???";
+          }
+          var txt = xml.localName;
+          txt += "\n<ul>\n";
+          for(var i = 0;i < xml.attributes.length;i++) {
+                  var item = xml.attributes.item(i);
+                  txt += "<li>";
+                  txt += item.name;
+                  txt += " = ";
+                  txt += "\"" + item.value + "\"";
+                  txt += "</li>";
+          }
+          for(var i = 0;i < xml.children.length;i++) {
+                  var child = xml.children[i];
+                  txt += "<li>";
+                  txt += this.renderNode(child);
+                  txt += "</li>";
+          }
+          txt += "\n</ul>\n";
+          return txt;
+  },
+
+  renderDiff: function(){
+    var xml = $(this.scene)[0];
+    var html = this.renderNode(xml);
+    $("#target").html(html);
   }
+  
+  
+/*
+        var scene  = null;
+        var shadow = null;
+
+        var renderNode = function(xml) {
+                if (!xml.localName) {
+                        return "???";
+                }
+                var txt = xml.localName;
+                txt += "\n<ul>\n";
+                for(var i = 0;i < xml.attributes.length;i++) {
+                        var item = xml.attributes.item(i);
+                        txt += "<li>";
+                        txt += item.name;
+                        txt += " = ";
+                        txt += "\"" + item.value + "\"";
+                        txt += "</li>";
+                }
+                for(var i = 0;i < xml.children.length;i++) {
+                        var child = xml.children[i];
+                        txt += "<li>";
+                        txt += renderNode(child);
+                        txt += "</li>";
+                }
+                txt += "\n</ul>\n";
+                return txt;
+        }
+        
+        var render = function() {
+           var xml = $(scene)[0];
+           var html = renderNode(xml);
+           $("#target").html(html);
+        };
+
+*/  
+  
 };
 
 module.exports = new ServerUtils();
 
-/*
-$(function(){
-  
-  // Every second, update the scene
-  var sceneText = "";
-  var resetScene = function(data) {
-//        console.log("checking")
-    if (data == sceneText) {
-        setTimeout(loadScene,1000)
-        return;
-    }
-    sceneText = data;
-    x = sceneText;
-    
-    if ($("a-scene").length == 0) {
-      // Now should never happen
-      $("body").prepend(data);
-    } else {
-      var ch = $("a-scene").children();
-      for(i = 0;i < ch.length;i++) {
-        if (!ch[i].localName
-              || ch[i].localName == "canvas"
-              || ch[i].localName == "div"
-              || ch[i].localName == "a-camera" 
-              || !ch[i].attributes
-              || (ch[i].localName == "a-entity" 
-                   && (ch[i].attributes["camera"] || $(ch[i]).find("a-entity[camera]").length > 0 || $(ch[i]).find("a-camera").length > 0))
-              || ch[i].attributes["data-aframe-default-light"]
-              || ch[i].attributes["data-aframe-default-camera"]
-        ) {
-//              console.log("leaving " + i);
-        } else {
-//              console.log("removing " + i)
-          // This appears to be leaving the Three.js Gemoetries behind. 
-          // TODO: check into this
-          $(ch[i]).remove()
-        }
-      }
-//          console.log("childern",$("a-scene").children())
-      // repace a-scene with x-scene to avoid triggering the a-scene callback
-      // (which inserts the defaults, and therefor makes two camera, which confuses
-      //  the THREE.js sub-system). Note replace only replaces the *first* 
-      // a-scene of the string, so will not effect any properties.
-      var xml = $(data.replace("a-scene","x-scene"));
-      // Remove the camera, if there is an (explicit) one.
-      // The camera is never dynamically updated (but controlled by the in-browser tools)
-      xml.find("a-entity[camera]").remove()
-
-//      console.log(xml)
-      xml.children().prependTo("a-scene");
-  
-      debug_xml = xml;
-      $("a-scene").attr("version",xml.attr("version"))  // update the version number
-    }
-    setTimeout(loadScene,1000)
-  }
-  var updateScene = function(d) {
-//    console.log("updateScene",d)
-    if (d.change && d.change == "HEAD") {
-      return loadScene();
-    } else {
-      loadScene("RELOAD");
-    }
-  }
-  var loadScene = function(ty) {
-    var version = $("a-scene").attr("version");
-    if (version == undefined || ty == "RELOAD") {
-      // do this the slow way
-      $.get( "/scene", resetScene);
-    } else {
-      // check for changes
-      $.getJSON( "/status/" + version, updateScene);          
-    }
-  }
-  loadScene("HEAD")
-});
-
-*/
