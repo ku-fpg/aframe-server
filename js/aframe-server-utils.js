@@ -1,6 +1,8 @@
 /* Reload the aframe dynamically, as needed. Put the scene back to the server, as needed.
  */
 
+var diff = require("diff");
+
 function ServerUtils () {
 
   // (From aframe-editor)
@@ -157,40 +159,114 @@ ServerUtils.prototype = {
             self.scene = o;
             self.renderDiff();
     });
-    $.get("/REST/scene", function(o) {
-            console.log("/REST/scene",o);
+    $.get("/REST/shadow", function(o) {
+            console.log("/REST/shadow",o);
             self.shadow = o;
             self.renderDiff();
     });
   },
 
-  renderNode: function(xml) {
-          if (!xml.localName) {
-                  return "???";
+  renderNode: function(orig,saved) {
+          if (!orig || !orig.localName 
+            || !saved || !saved.localName 
+            || (orig.localName != saved.localName)) {
+            console.log("mismatch",orig,saved);
+            return "-";
           }
-          var txt = xml.localName;
+
+          var listOf = function(o) {
+            var res = [];
+            for(var i = 0;i < o.length;i++) {
+              res.push(o.item(i));
+            }
+            return res;
+          }
+
+          var txt = orig.localName;
+
+          var origAttr = listOf(orig.attributes).map(function(o) { return o.name; }).join(' ');
+          var savedAttr = listOf(saved.attributes).map(function(o) { return o.name; }).join(' ');
+            
+          var diffAttr = diff.diffWords(origAttr,savedAttr);  
+
           txt += "\n<ul>\n";
-          for(var i = 0;i < xml.attributes.length;i++) {
-                  var item = xml.attributes.item(i);
+
+          diffAttr.forEach(function(part){
+            part.value.trim().split(" ").forEach(function(word){
+              txt += "<li>";
+              if(part.added) {
+                txt += "<font color=\"green\">";
+              } else if (part.removed) {
+                txt += "<font color=\"red\">";                
+              }
+              txt += word;
+              txt += " = ";
+              if (part.added) {
+                txt += '"' + saved.attributes.item(word).value + '"';
+              } else if (part.removed) {
+                txt += '"' + orig.attributes.item(word).value + '"';
+              } else {
+                txt += '<font color="green">"' + saved.attributes.item(word).value + '"</font>' +
+                   ' // <font color="red">"'   + orig.attributes.item(word).value  + '"</font>';
+              }
+              if(part.added || part.removed) {
+                txt += "</font>";                
+              }
+              txt += "</li>";
+            });
+          });
+
+          var origChidren   = listOf(orig.children).map(function(o) { return o.localName; }).join(' ');
+          var savedChildren = listOf(saved.children).map(function(o) { return o.localName; }).join(' ');
+          var diffChildren  = diff.diffWords(origChidren,savedChildren);  
+
+          diffChildren.forEach(function(part){
+            part.value.trim().split(" ").forEach(function(word){
+              txt += "<li>";
+              if(part.added) {
+                txt += "<font color=\"green\">";
+              } else if (part.removed) {
+                txt += "<font color=\"red\">";                
+              }
+              txt += word;
+
+              if(part.added || part.removed) {
+                txt += "</font>";                
+              }
+
+              txt += "</li>";
+            });
+          });
+
+          debugging = { orig: orig, saved: saved, listOf: listOf, origAttr:origAttr, savedAttr: savedAttr,
+                       diffAttr: diffAttr };
+
+
+/*
+          for(var i = 0;i < orig.attributes.length;i++) {
+                  var item = orig.attributes.item(i);
                   txt += "<li>";
                   txt += item.name;
                   txt += " = ";
                   txt += "\"" + item.value + "\"";
                   txt += "</li>";
           }
-          for(var i = 0;i < xml.children.length;i++) {
-                  var child = xml.children[i];
+
+          for(var i = 0;i < orig.children.length;i++) {
+                  var child = orig.children.item(i);
                   txt += "<li>";
                   txt += this.renderNode(child);
                   txt += "</li>";
           }
+*/
           txt += "\n</ul>\n";
           return txt;
   },
 
   renderDiff: function(){
-    var xml = $(this.scene)[0];
-    var html = this.renderNode(xml);
+    var orig = $(this.scene)[0];
+    var saved = $(this.shadow)[0];
+    var html = this.renderNode(orig,saved);
     $("#target").html(html);
   }
   
