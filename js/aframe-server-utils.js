@@ -191,6 +191,8 @@ ServerUtils.prototype = {
 
           txt += "\n<ul>\n";
 
+          var origCount = 0;
+          var savedCount = 0;
           diffAttr.forEach(function(part){
             part.value.trim().split(" ").forEach(function(word){
               txt += "<li>";
@@ -202,12 +204,17 @@ ServerUtils.prototype = {
               txt += word;
               txt += " = ";
               if (part.added) {
-                txt += '"' + saved.attributes.item(word).value + '"';
+                txt += '"' + saved.attributes.item(savedCount++).value + '"';
               } else if (part.removed) {
-                txt += '"' + orig.attributes.item(word).value + '"';
+                txt += '"' + orig.attributes.item(origCount++).value + '"';
               } else {
-                txt += '<font color="green">"' + saved.attributes.item(word).value + '"</font>' +
-                   ' // <font color="red">"'   + orig.attributes.item(word).value  + '"</font>';
+                if (saved.attributes.item(savedCount).value == orig.attributes.item(origCount).value) {
+                  txt += '"' + orig.attributes.item(origCount++).value + '"';
+                  savedCount++;
+                } else {
+                  txt += '<font color="green">"' + saved.attributes.item(savedCount++).value + '"</font>' +
+                     ' // <font color="red">"'   + orig.attributes.item(origCount++).value  + '"</font>';
+                }
               }
               if(part.added || part.removed) {
                 txt += "</font>";                
@@ -220,6 +227,8 @@ ServerUtils.prototype = {
           var savedChildren = listOf(saved.children).map(function(o) { return o.localName; }).join(' ');
           var diffChildren  = diff.diffWords(origChidren,savedChildren);  
 
+          var origCount = 0;
+          var savedCount = 0;
           diffChildren.forEach(function(part){
             part.value.trim().split(" ").forEach(function(word){
               txt += "<li>";
@@ -228,8 +237,17 @@ ServerUtils.prototype = {
               } else if (part.removed) {
                 txt += "<font color=\"red\">";                
               }
-              txt += word;
-
+              if(part.added) {
+                var subSaved = saved.children.item(savedCount++);
+                txt += self.renderNode(subSaved,subSaved);
+              } else if (part.removed) {
+                var subOrig = orig.children.item(origCount++);
+                txt += self.renderNode(subOrig,subOrig);
+              } else {
+                var subOrig = orig.children.item(origCount++);
+                var subSaved = saved.children.item(savedCount++);
+                txt += self.renderNode(subOrig,subSaved);
+              }
               if(part.added || part.removed) {
                 txt += "</font>";                
               }
@@ -241,31 +259,23 @@ ServerUtils.prototype = {
           debugging = { orig: orig, saved: saved, listOf: listOf, origAttr:origAttr, savedAttr: savedAttr,
                        diffAttr: diffAttr };
 
-
-/*
-          for(var i = 0;i < orig.attributes.length;i++) {
-                  var item = orig.attributes.item(i);
-                  txt += "<li>";
-                  txt += item.name;
-                  txt += " = ";
-                  txt += "\"" + item.value + "\"";
-                  txt += "</li>";
-          }
-
-          for(var i = 0;i < orig.children.length;i++) {
-                  var child = orig.children.item(i);
-                  txt += "<li>";
-                  txt += this.renderNode(child);
-                  txt += "</li>";
-          }
-*/
           txt += "\n</ul>\n";
           return txt;
   },
 
   renderDiff: function(){
+    if (!this.scene) {
+      $("#target").html("original scene not readable");
+    }
     var orig = $(this.scene)[0];
+    if (!this.shadow) {
+      $("#target").html("shadow scene not readable");
+    }
     var saved = $(this.shadow)[0];
+    if (saved.localName == "div") {
+      $("#target").html("shadow scene not saved (yet)");      
+    }
+
     var html = this.renderNode(orig,saved);
     $("#target").html(html);
   }
