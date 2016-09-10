@@ -197,6 +197,14 @@ ServerUtils.prototype = {
 
           var origCount = 0;
           var savedCount = 0;
+
+          function showAttr(str) {
+            if (str == "") { 
+                return "";
+              }
+              return '= "' + str + '"';
+          }
+
           diffAttr.forEach(function(part){
             part.value.trim().split(" ").forEach(function(word){
               txt += "<li>";
@@ -206,18 +214,17 @@ ServerUtils.prototype = {
                 txt += "<font color=\"red\">";                
               }
               txt += word;
-              txt += " = ";
               if (part.added) {
-                txt += '"' + saved.attributes.item(savedCount++).value + '"';
+                txt += showAttr(saved.attributes.item(savedCount++).value);
               } else if (part.removed) {
-                txt += '"' + orig.attributes.item(origCount++).value + '"';
+                txt += showAttr(orig.attributes.item(origCount++).value);
               } else {
                 if (saved.attributes.item(savedCount).value == orig.attributes.item(origCount).value) {
-                  txt += '"' + orig.attributes.item(origCount++).value + '"';
+                  txt += showAttr(orig.attributes.item(origCount++).value);
                   savedCount++;
                 } else {
-                  txt += '<font color="green">"' + saved.attributes.item(savedCount++).value + '"</font>' +
-                     ' // <font color="red">"'   + orig.attributes.item(origCount++).value  + '"</font>';
+                  txt += '= <font color="green">"' + saved.attributes.item(savedCount++).value + '"</font>' +
+                       ' // <font color="red">"'   + orig.attributes.item(origCount++).value   + '"</font>';
                 }
               }
               if(part.added || part.removed) {
