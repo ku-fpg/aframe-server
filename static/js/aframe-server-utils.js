@@ -40,6 +40,8 @@ ServerUtils.prototype = {
     console.log("onSceneLoaded !",params);
     // Do we need to send the edited Scene back to the server periodically?
     if (params.get("edit") != undefined) {
+      this.edit = true;
+//      $("a-scene").attr("debug","true")
       console.log("edit key (s+cntl+alt) enabled");
       // (from aframe's inspector.js)
       this.onKeydown = this.onKeydown.bind(this);
@@ -47,6 +49,7 @@ ServerUtils.prototype = {
       this.pushScene(); // And also push back the initial version of the scene to the shadow AFrame Object.
     }
     if (params.get("load") != undefined) {
+      this.load = true;
       this.loadScene("HEAD")      
     }
   },
@@ -168,6 +171,7 @@ ServerUtils.prototype = {
   },
 
   renderNode: function(orig,saved) {
+    var self = this;
           if (!orig || !orig.localName 
             || !saved || !saved.localName 
             || (orig.localName != saved.localName)) {

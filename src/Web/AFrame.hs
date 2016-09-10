@@ -150,10 +150,14 @@ aframeServer optScene port jssExtras state = do
           -- get the scene html file
           -- TODO: check to see if there is no HTML wrapper,
           -- and if not, use a (static) wrapper.
+          ps <- params
           txt <- liftIO $ do
                 wrapper <- readFile scene
                 af      <- atomically (masterAFrame state # GetAFrame)
-                return $ injectJS jss 0 $ injectAFrame af wrapper
+                let af' = if   "debug" `elem` map fst ps
+                          then setAttribute "debug" "true" af
+                          else af
+                return $ injectJS jss 0 $ injectAFrame af' wrapper
 --                return $ wrapper
           S.html $ LT.pack $ txt   
       | (s,jss) <- scenes
