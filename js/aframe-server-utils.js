@@ -174,7 +174,7 @@ ServerUtils.prototype = {
           if (!orig || !orig.localName 
             || !saved || !saved.localName 
             || (orig.localName != saved.localName)) {
-            console.log("mismatch",orig,saved);
+//            console.log("mismatch",orig,saved);
             return "-";
           }
 
@@ -202,7 +202,7 @@ ServerUtils.prototype = {
             if (str == "") { 
                 return "";
               }
-              return '= "' + str + '"';
+              return ' = "' + str + '"';
           }
 
           diffAttr.forEach(function(part){
@@ -223,8 +223,8 @@ ServerUtils.prototype = {
                   txt += showAttr(orig.attributes.item(origCount++).value);
                   savedCount++;
                 } else {
-                  txt += '= <font color="green">"' + saved.attributes.item(savedCount++).value + '"</font>' +
-                       ' // <font color="red">"'   + orig.attributes.item(origCount++).value   + '"</font>';
+                  txt += ' = <font color="green">"' + saved.attributes.item(savedCount++).value + '"</font>' +
+                       '  // <font color="red">"'   + orig.attributes.item(origCount++).value   + '"</font>';
                 }
               }
               if(part.added || part.removed) {
@@ -242,6 +242,9 @@ ServerUtils.prototype = {
           var savedCount = 0;
           diffChildren.forEach(function(part){
             part.value.trim().split(" ").forEach(function(word){
+              if (word == "") {
+                return;
+              }  
               txt += "<li>";
               if(part.added) {
                 txt += "<font color=\"green\">";
@@ -267,11 +270,41 @@ ServerUtils.prototype = {
             });
           });
 
-          debugging = { orig: orig, saved: saved, listOf: listOf, origAttr:origAttr, savedAttr: savedAttr,
-                       diffAttr: diffAttr };
+//          debugging = { orig: orig, saved: saved, listOf: listOf, origAttr:origAttr, savedAttr: savedAttr,
+//                       diffAttr: diffAttr };
 
           txt += "\n</ul>\n";
           return txt;
+  },
+
+  // Rewrite XML to un-expand the a-frame changes.
+  normalizeSaved: function(xml) {
+    console.log(xml.localName);
+    if (xml.localName == "canvas") {
+        return false;
+    }
+
+    if (xml.attributes.getNamedItem("aframe-injected")) {
+      console.log("injected...");
+      return false;
+    }
+
+    ["inspector","vr-mode-ui","keyboard-shortcuts","debug","canvas","class"]
+    .forEach(function(item) {
+            if (xml.attributes.getNamedItem(item)) {
+                xml.attributes.removeNamedItem(item);
+            }
+    });
+
+    for(var i = 0;i < xml.children.length;i++) {
+      var res = this.normalizeSaved(xml.children.item(i));
+      if (!res) {
+          xml.removeChild(xml.children.item(i));
+          i--; // back up a step, because you've just deleted                       
+               // a node                                                            
+        }
+      }
+      return true;
   },
 
   renderDiff: function(){
@@ -286,6 +319,10 @@ ServerUtils.prototype = {
     if (saved.localName == "div") {
       $("#target").html("shadow scene not saved (yet)");      
     }
+
+    this.normalizeSaved(saved);
+
+    debugging = { orig: orig, saved: saved };
 
     var html = this.renderNode(orig,saved);
     $("#target").html(html);
