@@ -1,9 +1,9 @@
 {-# LANGUAGE KindSignatures, GADTs, LambdaCase, ScopedTypeVariables, TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.AFrame 
+module Web.AFrame
   ( -- * The Update data-structure
-    AFrameR(..)  
+    AFrameR(..)
   , Change(..)
     -- * Options
   , Options(..)
@@ -20,7 +20,7 @@ module Web.AFrame
 
 import           Control.Concurrent
 import qualified Control.Natural as N
-import           Control.Natural(type (:~>), nat)
+import           Control.Natural(type (:~>), wrapNT)
 import qualified Control.Object as O
 import           Control.Object ((#))
 
@@ -54,22 +54,22 @@ import           Data.Text.Encoding
 import Paths_aframe_server
 
 
-data Options = Options 
-  { scenePath       :: Maybe FilePath   -- The AFrame Text, embedded inside an HTML document. 
+data Options = Options
+  { scenePath       :: Maybe FilePath   -- The AFrame Text, embedded inside an HTML document.
                                         -- Nothing when you have no original file.
                                         -- Currenly only used to find the root directory
   , jsFiles         :: [String]   -- JS files to inject into theh HTML
   , sceneComponents :: [String]   -- components to inject into the \<a-scene>
   } deriving (Show)
- 
+
 defaultOptions :: Options
 defaultOptions = Options
   { scenePath       = Nothing
   , jsFiles         = []
   , sceneComponents = []
-  } 
+  }
 
-data ServerState = ServerState 
+data ServerState = ServerState
  { masterAFrame :: Object               -- this is the one we serve, RO
  , shadowAFrame :: Object               -- this is the shadow, which is a copy of the /edit page's DOM.
                                         -- it may be empty (how?)
@@ -86,14 +86,14 @@ aframeStart opts a = do
   let state = ServerState master shadow
 
   forkIO $ aframeServer fileName 3947 (jsFiles opts) $ state
-  
+
   return state
 
 -- This entry point generates a server that handles the AFrame.
 -- It never terminates, but can be started in a seperate thread.
 -- The first argument is the name of the file to be server.
 -- The second argument is the port to be served from.
--- The thrid argument is a list of URLs to serve up as 
+-- The thrid argument is a list of URLs to serve up as
 
 aframeServer :: Maybe String -> Int -> [String] -> ServerState -> IO ()
 aframeServer optScene port jssExtras state = do
@@ -118,7 +118,7 @@ aframeServer optScene port jssExtras state = do
                --  use with aframe-pull (TODO)
                -- , "https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"
 
-  let injectJS jss n cs | "</head>" `L.isPrefixOf` cs = 
+  let injectJS jss n cs | "</head>" `L.isPrefixOf` cs =
         unlines [ s ++ "  <script src=\"" ++ js ++ "\"></script>"
                 | (s,js) <- ("":repeat spaces) `zip` jss
                 ] ++ spaces ++ cs
@@ -145,7 +145,7 @@ aframeServer optScene port jssExtras state = do
        txt <- liftIO $ getDataFileName $ "static/index.html"
        S.file $ txt
 
-    sequence_ 
+    sequence_
       [ S.get (capture s) $ do
           -- get the scene html file
           -- TODO: check to see if there is no HTML wrapper,
@@ -159,15 +159,15 @@ aframeServer optScene port jssExtras state = do
                           else af
                 return $ injectJS jss 0 $ injectAFrame af' wrapper
 --                return $ wrapper
-          S.html $ LT.pack $ txt   
+          S.html $ LT.pack $ txt
       | (s,jss) <- scenes
       ]
- 
+
     S.get "/diff.html" $ do
           txt <- liftIO $ do
                 fileName <- getDataFileName "static/diff.html"
                 readFile fileName
-          S.html $ LT.pack $ txt   
+          S.html $ LT.pack $ txt
 
     -- support the static files
     sequence_
@@ -178,7 +178,7 @@ aframeServer optScene port jssExtras state = do
       ]
 
     -- support the CLI files
-    sequence_ 
+    sequence_
       [ S.get (capture p) $ do
           S.file $ fileLocation
       | p@('/':fileLocation) <- L.nub $ concat $ map snd scenes
@@ -202,13 +202,13 @@ aframeServer optScene port jssExtras state = do
                           atomically $
                                 (f state # GetAFrameStatus v) `orElse`
                                         do ping <- readTVar timer
-                                           if ping 
+                                           if ping
                                            then return HEAD -- timeout
                                            else retry       -- try again
 
                   S.json $ s
 
-      | (f :: ServerState -> Object,nm) <- 
+      | (f :: ServerState -> Object,nm) <-
               [(masterAFrame,"scene")
               ,(shadowAFrame,"shadow")
               ]
@@ -225,7 +225,7 @@ aframeServer optScene port jssExtras state = do
              Nothing -> S.json $ UpdateSuccess $ False
              Just af -> do
                liftIO $ atomically $ do
-                  shadowAFrame state # SetAFrame af 
+                  shadowAFrame state # SetAFrame af
                liftIO $ print "Set shadow"
                S.json $ UpdateSuccess $ True
 

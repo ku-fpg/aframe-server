@@ -18,7 +18,7 @@ module Web.AFrame.Object
 
 import           Control.Concurrent
 import qualified Control.Natural as N
-import           Control.Natural(type (:~>), type (~>), nat)
+import           Control.Natural(type (:~>), type (~>), wrapNT)
 import qualified Control.Object as O
 import           Control.Object ((#))
 
@@ -67,9 +67,9 @@ instance ToJSON Change where
     -- this generates a Value
     toJSON HEAD   = object ["change" .= ("HEAD" :: String)]
     toJSON RELOAD = object ["change" .= ("RELOAD" :: String)]
-    toJSON (DELTAS pas) 
+    toJSON (DELTAS pas)
                   = object ["change" .= ("DELTAS" :: String)
-                           ,"changes" .= 
+                           ,"changes" .=
                                [ object ["path" .= p, "attr" .= l, "value" .= v]
                                | (p,(l,v)) <-  pas
                                ]
@@ -98,7 +98,7 @@ fileWriter fileName delay obj = loop ""
           Just version | version == old -> loop version
                        | otherwise -> do
             -- we do not include the version number in what we save
-            -- the version number is sessions 
+            -- the version number is sessions
             writeFile fileName $ showAFrame $ resetAttribute "version" $ aframe
             loop version
 
@@ -114,7 +114,7 @@ aframeTrace obj = do
         if old == new
         then loop new
         else do
-            let ds = deltaAFrame old new 
+            let ds = deltaAFrame old new
             print ("diff",ds) -- Diff.compress ds)
             loop new
 
@@ -157,11 +157,11 @@ newObject a = do
                                   writeTVar var $ modifyDB a (fm,ix)
               GetAFrameStatus p -> do
                                   (fm,ix) <- readTVar var
-                                  if ix /= p 
+                                  if ix /= p
                                   then case (Map.lookup p fm,Map.lookup ix fm) of
                                          (Just old,Just new) ->
                                             case deltaAFrame old new of
-                                              Just diffs -> return 
+                                              Just diffs -> return
                                                                 $ DELTAS
                                                                 $ (Path "a-scene" [],("version",fromString $ show ix))
                                                                 : diffs
