@@ -10,7 +10,7 @@ module Web.AFrame.GHCi
 
 import           Control.Concurrent
 import qualified Control.Natural as N
-import           Control.Natural(type (:~>), nat, (#))
+import           Control.Natural(type (:~>), wrapNT, (#))
 
 import           Data.Functor.Identity
 import           Data.Monoid
@@ -30,17 +30,17 @@ aframeScene :: MVar Object
 aframeScene = unsafePerformIO newEmptyMVar
 
 start :: Options -> IO ()
-start o = do ServerState obj _ <- aframeStart defaultOptions $ scene $ return () 
+start o = do ServerState obj _ <- aframeStart defaultOptions $ scene $ return ()
              putMVar aframeScene obj
 
 
 s :: AFrame -> IO ()
-s = u . const  
+s = u . const
 
 u :: (AFrame -> AFrame) -> IO ()
 u f = do
   obj <- readMVar aframeScene
-  atomically $ do 
+  atomically $ do
     af <- obj # GetAFrame
     obj # SetAFrame (f af)
 
